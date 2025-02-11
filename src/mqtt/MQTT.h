@@ -65,6 +65,10 @@ class MQTT : private concurrency::OSThread
 
     bool isUsingDefaultServer() { return isConfiguredForDefaultServer; }
 
+	void setMqttCallback(std::function<void(char *topic, byte *payload, unsigned int length)> callback);
+
+	bool subscribe(const char *topic);
+
   protected:
     struct QueueEntry {
         std::string topic;

@@ -36,7 +36,7 @@
 #define ntohl __ntohl
 #endif
 
-MQTT *mqtt;
+MQTT *mqtt = nullptr;
 
 namespace
 {
@@ -256,6 +256,16 @@ void MQTT::onClientProxyReceive(meshtastic_MqttClientProxyMessage msg)
     onReceive(msg.topic, msg.payload_variant.data.bytes, msg.payload_variant.data.size);
 }
 
+void MQTT::setMqttCallback(std::function<void(char *topic, byte *payload, unsigned int length)> callback)
+{
+	pubSub.setCallback(callback);
+}
+
+bool MQTT::subscribe(const char *topic)
+{
+	return pubSub.subscribe(topic);
+}
+
 void MQTT::onReceive(char *topic, byte *payload, size_t length)
 {
     if (length == 0) {
@@ -302,7 +312,7 @@ MQTT::MQTT() : concurrency::OSThread("mqtt"), mqttQueue(MAX_MQTT_QUEUE)
     if (moduleConfig.mqtt.enabled) {
         LOG_DEBUG("Init MQTT");
 
-        assert(!mqtt);
+        assert(mqtt == nullptr);
         mqtt = this;
 
         if (*moduleConfig.mqtt.root) {
