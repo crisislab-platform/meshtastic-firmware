@@ -10,7 +10,7 @@
 #include "input/cardKbI2cImpl.h"
 #include "input/kbMatrixImpl.h"
 #endif
-#if CRISISLAB_GATEWAY
+#if MESHTASTIC_CRISISLAB_GATEWAY
 #include "modules/crisislab/GatewayModule.h"
 #endif
 #if !MESHTASTIC_EXCLUDE_ADMIN
@@ -142,7 +142,7 @@ void setupModules()
 #if !MESHTASTIC_EXCLUDE_POWERSTRESS
         new PowerStressModule();
 #endif
-#if CRISISLAB_GATEWAY
+#if MESHTASTIC_CRISISLAB_GATEWAY
 		new GatewayModule();
 #endif
         // Example: Put your module here

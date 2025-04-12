@@ -519,6 +519,8 @@ void MQTT::sendSubscriptions()
 
 bool MQTT::wantsLink() const
 {
+#if !MESHTASTIC_CRISISLAB_GATEWAY
+
     bool hasChannelorMapReport =
         moduleConfig.mqtt.enabled && (moduleConfig.mqtt.map_reporting_enabled || channels.anyMqttEnabled());
 
@@ -532,13 +534,20 @@ bool MQTT::wantsLink() const
     return hasChannelorMapReport && Ethernet.linkStatus() == LinkON;
 #endif
     return false;
+
+#else
+	return true;
+#endif
 }
 
 int32_t MQTT::runOnce()
 {
 #if HAS_NETWORKING
-    if (!moduleConfig.mqtt.enabled || !(moduleConfig.mqtt.map_reporting_enabled || channels.anyMqttEnabled()))
+#if !MESHTASTIC_CRISISLAB_GATEWAY
+    if (!moduleConfig.mqtt.enabled || !(moduleConfig.mqtt.map_reporting_enabled || channels.anyMqttEnabled())) {
         return disable();
+	}
+#endif
 
     bool wantConnection = wantsLink();
 
@@ -554,6 +563,7 @@ int32_t MQTT::runOnce()
         if (!wantConnection)
             return 5000; // If we don't want connection now, check again in 5 secs
         else {
+			LOG_INFO("MQTT reconnect");
             reconnect();
             // If we succeeded, empty the queue one by one and start reading rapidly, else try again in 30 seconds (TCP
             // connections are EXPENSIVE so try rarely)
