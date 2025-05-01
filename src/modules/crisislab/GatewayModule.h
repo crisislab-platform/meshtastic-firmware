@@ -1,12 +1,17 @@
 #pragma once
 
-#include "SinglePortModule.h"
+#include <Preferences.h>
+
+#include "ProtobufModule.h"
 #include "concurrency/OSThread.h"
+#include "../../mesh/generated/meshtastic/crisislab.pb.h"
 
 class GatewayModule : public SinglePortModule, private concurrency::OSThread
 {
   public:
-	GatewayModule() : SinglePortModule("crisislabgatewaymodule", meshtastic_PortNum_PRIVATE_APP), concurrency::OSThread("GatewayModule") {};
+	GatewayModule();
+
+	static ChannelIndex channelIndex;
 
   protected:
 	virtual ProcessMessage handleReceived(const meshtastic_MeshPacket &packet) override;

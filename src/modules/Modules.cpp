@@ -13,6 +13,9 @@
 #if MESHTASTIC_CRISISLAB_GATEWAY
 #include "modules/crisislab/GatewayModule.h"
 #endif
+#if MESHTASTIC_CRISISLAB_NORMAL
+#include "modules/crisislab/NormalNodeModule.h"
+#endif
 #if !MESHTASTIC_EXCLUDE_ADMIN
 #include "modules/AdminModule.h"
 #endif
@@ -144,6 +147,9 @@ void setupModules()
 #endif
 #if MESHTASTIC_CRISISLAB_GATEWAY
 		new GatewayModule();
+#endif
+#if MESHTASTIC_CRISISLAB_NORMAL
+		new NormalNodeModule();
 #endif
         // Example: Put your module here
         // new ReplyModule();

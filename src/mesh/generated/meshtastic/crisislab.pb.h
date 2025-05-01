@@ -9,56 +9,43 @@
 #error Regenerate this file with the current version of nanopb generator.
 #endif
 
-/* Enum definitions */
-typedef enum _meshtastic_CrisislabCommand_Type {
-    meshtastic_CrisislabCommand_Type_SET_BROADCAST_INTERVAL = 0
-} meshtastic_CrisislabCommand_Type;
-
 /* Struct definitions */
-typedef struct _meshtastic_CrisislabCommand {
-    meshtastic_CrisislabCommand_Type type;
-    pb_size_t which_payload;
+typedef struct _meshtastic_CrisislabMessage {
+    pb_size_t which_message;
     union {
         uint32_t broadcast_interval_seconds;
-    } payload;
-} meshtastic_CrisislabCommand;
+        char channel_name[12];
+    } message;
+} meshtastic_CrisislabMessage;
 
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-/* Helper constants for enums */
-#define _meshtastic_CrisislabCommand_Type_MIN meshtastic_CrisislabCommand_Type_SET_BROADCAST_INTERVAL
-#define _meshtastic_CrisislabCommand_Type_MAX meshtastic_CrisislabCommand_Type_SET_BROADCAST_INTERVAL
-#define _meshtastic_CrisislabCommand_Type_ARRAYSIZE ((meshtastic_CrisislabCommand_Type)(meshtastic_CrisislabCommand_Type_SET_BROADCAST_INTERVAL+1))
-
-#define meshtastic_CrisislabCommand_type_ENUMTYPE meshtastic_CrisislabCommand_Type
-
-
 /* Initializer values for message structs */
-#define meshtastic_CrisislabCommand_init_default {_meshtastic_CrisislabCommand_Type_MIN, 0, {0}}
-#define meshtastic_CrisislabCommand_init_zero    {_meshtastic_CrisislabCommand_Type_MIN, 0, {0}}
+#define meshtastic_CrisislabMessage_init_default {0, {0}}
+#define meshtastic_CrisislabMessage_init_zero    {0, {0}}
 
 /* Field tags (for use in manual encoding/decoding) */
-#define meshtastic_CrisislabCommand_type_tag     1
-#define meshtastic_CrisislabCommand_broadcast_interval_seconds_tag 2
+#define meshtastic_CrisislabMessage_broadcast_interval_seconds_tag 1
+#define meshtastic_CrisislabMessage_channel_name_tag 2
 
 /* Struct field encoding specification for nanopb */
-#define meshtastic_CrisislabCommand_FIELDLIST(X, a) \
-X(a, STATIC,   SINGULAR, UENUM,    type,              1) \
-X(a, STATIC,   ONEOF,    UINT32,   (payload,broadcast_interval_seconds,payload.broadcast_interval_seconds),   2)
-#define meshtastic_CrisislabCommand_CALLBACK NULL
-#define meshtastic_CrisislabCommand_DEFAULT NULL
+#define meshtastic_CrisislabMessage_FIELDLIST(X, a) \
+X(a, STATIC,   ONEOF,    UINT32,   (message,broadcast_interval_seconds,message.broadcast_interval_seconds),   1) \
+X(a, STATIC,   ONEOF,    STRING,   (message,channel_name,message.channel_name),   2)
+#define meshtastic_CrisislabMessage_CALLBACK NULL
+#define meshtastic_CrisislabMessage_DEFAULT NULL
 
-extern const pb_msgdesc_t meshtastic_CrisislabCommand_msg;
+extern const pb_msgdesc_t meshtastic_CrisislabMessage_msg;
 
 /* Defines for backwards compatibility with code written before nanopb-0.4.0 */
-#define meshtastic_CrisislabCommand_fields &meshtastic_CrisislabCommand_msg
+#define meshtastic_CrisislabMessage_fields &meshtastic_CrisislabMessage_msg
 
 /* Maximum encoded size of messages (where known) */
-#define MESHTASTIC_MESHTASTIC_CRISISLAB_PB_H_MAX_SIZE meshtastic_CrisislabCommand_size
-#define meshtastic_CrisislabCommand_size         8
+#define MESHTASTIC_MESHTASTIC_CRISISLAB_PB_H_MAX_SIZE meshtastic_CrisislabMessage_size
+#define meshtastic_CrisislabMessage_size         13
 
 #ifdef __cplusplus
 } /* extern "C" */

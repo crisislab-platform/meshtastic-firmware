@@ -6,9 +6,7 @@
 #error Regenerate this file with the current version of nanopb generator.
 #endif
 
-PB_BIND(meshtastic_CrisislabCommand, meshtastic_CrisislabCommand, AUTO)
-
-
+PB_BIND(meshtastic_CrisislabMessage, meshtastic_CrisislabMessage, AUTO)
 
 
 

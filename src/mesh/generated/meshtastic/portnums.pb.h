@@ -135,6 +135,11 @@ typedef enum _meshtastic_PortNum {
     /* ATAK Forwarder Module https://github.com/paulmandal/atak-forwarder
  ENCODING: libcotshrink */
     meshtastic_PortNum_ATAK_FORWARDER = 257,
+    /* CRISiSLab: gateway module - for nodes with internet connectivity, responsible for MQTT comms
+ with server and the rest of the mesh */
+    meshtastic_PortNum_CRISISLAB_GATEWAY_APP = 258,
+    /* CRISiSLab: normal node module - for all non-gateway nodes in CRISiSLab's mesh */
+    meshtastic_PortNum_CRISISLAB_NORMAL_APP = 259,
     /* Currently we limit port nums to no higher than this value */
     meshtastic_PortNum_MAX = 511
 } meshtastic_PortNum;
