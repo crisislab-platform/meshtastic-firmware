@@ -8,6 +8,7 @@ NormalNodeModule::NormalNodeModule() :
 
 	logPreferences({
 		"bcast_interval",
+		"channel_name"
 	});
 }
 
