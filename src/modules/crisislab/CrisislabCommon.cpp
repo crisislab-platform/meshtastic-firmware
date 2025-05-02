@@ -1,10 +1,23 @@
-#include "common.h"
-#include "configuration.h"
+#include <Preferences.h>
 
-void logPreferences(const std::vector<std::string> &prefNames)
+#include "configuration.h"
+#include "Channels.h"
+#include "CrisislabCommon.h"
+
+// default to public channel
+ChannelIndex CrisislabCommon::channelIndex = 0;
+
+CrisislabCommon::CrisislabCommon()
 {
 	Preferences preferences;
 	preferences.begin("crisislab", true);
+
+	// log preferences
+
+	std::string prefNames[] = {
+		"bcast_interval",
+		"channel_name",
+	};
 
 	for (const auto &pref : prefNames) {
 		if (!preferences.isKey(pref.c_str())) {
@@ -26,10 +39,17 @@ void logPreferences(const std::vector<std::string> &prefNames)
 		}
 	}
 
+	// load channel index into memory
+	if (preferences.isKey("channel_name")) {
+		char channelName[12];
+		preferences.getString("channel_name", channelName, 12);
+		CrisislabCommon::channelIndex = channels.getByName(channelName).index;
+	}
+
 	preferences.end();
 }
 
-void handleCrisislabMessage(const meshtastic_CrisislabMessage &message)
+void CrisislabCommon::handleCrisislabMessage(const meshtastic_CrisislabMessage &message)
 {
 	Preferences preferences;
 

@@ -3,10 +3,11 @@
 #include <Preferences.h>
 
 #include "ProtobufModule.h"
+#include "CrisislabCommon.h"
 #include "concurrency/OSThread.h"
 #include "../../mesh/generated/meshtastic/crisislab.pb.h"
 
-class GatewayModule : public SinglePortModule, private concurrency::OSThread
+class GatewayModule : public CrisislabCommon, public SinglePortModule, private concurrency::OSThread
 {
   public:
 	GatewayModule();

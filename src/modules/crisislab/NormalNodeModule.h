@@ -3,9 +3,10 @@
 #include <Preferences.h>
 
 #include "SinglePortModule.h"
+#include "CrisislabCommon.h"
 #include "../../mesh/generated/meshtastic/crisislab.pb.h"
 
-class NormalNodeModule : public SinglePortModule
+class NormalNodeModule : public CrisislabCommon, public SinglePortModule
 {
   public:
 	NormalNodeModule();

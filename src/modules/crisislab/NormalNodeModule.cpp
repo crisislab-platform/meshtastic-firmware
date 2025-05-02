@@ -1,15 +1,11 @@
-#include "common.h"
 #include "NormalNodeModule.h"
+#include "CrisislabCommon.h"
 
 NormalNodeModule::NormalNodeModule() :
+	CrisislabCommon(),
 	SinglePortModule("NormalNodeModule", meshtastic_PortNum_CRISISLAB_NORMAL_APP)
 {
 	LOG_DEBUG("This node is a normal CRISiSLab node");
-
-	logPreferences({
-		"bcast_interval",
-		"channel_name"
-	});
 }
 
 ProcessMessage NormalNodeModule::handleReceived(const meshtastic_MeshPacket &packet)
@@ -24,7 +20,7 @@ ProcessMessage NormalNodeModule::handleReceived(const meshtastic_MeshPacket &pac
 	)) {
 		LOG_ERROR("Failed to decode crisislab message protobuf");
 	} else {
-		handleCrisislabMessage(message);
+		CrisislabCommon::handleCrisislabMessage(message);
 	}
 
 	return ProcessMessage::STOP;

@@ -7,15 +7,13 @@
 #include "mqtt/MQTT.h"
 #include "../../mesh/generated/meshtastic/crisislab.pb.h"
 #include "NormalNodeModule.h"
-#include "common.h" // TODO: rename to CrisislabCommon
+#include "CrisislabCommon.h"
 
 #define MQTT_INCOMING_TOPIC "for-mesh"
 #define MQTT_INCOMING_TOPIC_LEN 8
 
-// default to public channel
-ChannelIndex GatewayModule::channelIndex = 0;
-
 GatewayModule::GatewayModule() :
+	CrisislabCommon(),
 	SinglePortModule(
 		"crisislabgatewaymodule",
 		meshtastic_PortNum_CRISISLAB_GATEWAY_APP
@@ -23,25 +21,7 @@ GatewayModule::GatewayModule() :
 	concurrency::OSThread("GatewayModule")
 {
 	LOG_DEBUG("This node is a CRISiSLab gateway node");
-
-	logPreferences({
-		"bcast_interval",
-		"channel_name",
-	});
-
-	// try to load channel index into memory for easy access
-
-	Preferences preferences;
-	preferences.begin("crisislab", true);
-
-	if (preferences.isKey("channel_name")) {
-		char channelName[12];
-		preferences.getString("channel_name", channelName, 12);
-		GatewayModule::channelIndex = channels.getByName(channelName).index;
-	}
-
-	preferences.end();
-};
+}
 
 // later we will override the mqtt callback so that this function is what's
 // called every time we get a message from the mqtt broker
@@ -67,7 +47,7 @@ void GatewayModule::mqttCallback(char *topic, byte *payload, unsigned int payloa
 
 	meshtastic_MeshPacket *mesh_packet = router->allocForSending();
 
-	mesh_packet->channel = GatewayModule::channelIndex;
+	mesh_packet->channel = CrisislabCommon::channelIndex;
 	mesh_packet->priority = meshtastic_MeshPacket_Priority_RELIABLE;
 	mesh_packet->decoded.portnum = meshtastic_PortNum_CRISISLAB_GATEWAY_APP;
 	mesh_packet->decoded.payload.size = payloadLength;
@@ -76,13 +56,13 @@ void GatewayModule::mqttCallback(char *topic, byte *payload, unsigned int payloa
 	if (mesh_packet->channel == 0) {
 		LOG_WARN("Crisislab modules are using the primary channel");
 	} else {
-		LOG_DEBUG("Using channel index %d for crisislab message", GatewayModule::channelIndex);
+		LOG_DEBUG("Using channel index %d for crisislab message", CrisislabCommon::channelIndex);
 	}
 
 	service->sendToMesh(mesh_packet);
 
 	// handle the message ourselves accordingly
-	handleCrisislabMessage(message);
+	CrisislabCommon::handleCrisislabMessage(message);
 }
 
 int32_t GatewayModule::runOnce()
