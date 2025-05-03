@@ -20,7 +20,11 @@ ProcessMessage NormalNodeModule::handleReceived(const meshtastic_MeshPacket &pac
 	)) {
 		LOG_ERROR("Failed to decode crisislab message protobuf");
 	} else {
-		CrisislabCommon::handleCrisislabMessage(message);
+		CrisislabCommon::handleCrisislabMessage(
+			message,
+			packet.decoded.payload.bytes,
+			packet.decoded.payload.size
+		);
 	}
 
 	return ProcessMessage::STOP;

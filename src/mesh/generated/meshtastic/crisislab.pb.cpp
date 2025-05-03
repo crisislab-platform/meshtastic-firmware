@@ -9,4 +9,7 @@
 PB_BIND(meshtastic_CrisislabMessage, meshtastic_CrisislabMessage, AUTO)
 
 
+PB_BIND(meshtastic_CrisislabMessage_Empty, meshtastic_CrisislabMessage_Empty, AUTO)
+
+
 

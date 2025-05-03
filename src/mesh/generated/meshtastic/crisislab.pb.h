@@ -10,11 +10,17 @@
 #endif
 
 /* Struct definitions */
+typedef struct _meshtastic_CrisislabMessage_Empty {
+    char dummy_field;
+} meshtastic_CrisislabMessage_Empty;
+
 typedef struct _meshtastic_CrisislabMessage {
     pb_size_t which_message;
     union {
         uint32_t broadcast_interval_seconds;
         char channel_name[12];
+        meshtastic_CrisislabMessage_Empty update_routes;
+        uint64_t ping_timestamp;
     } message;
 } meshtastic_CrisislabMessage;
 
@@ -25,26 +31,41 @@ extern "C" {
 
 /* Initializer values for message structs */
 #define meshtastic_CrisislabMessage_init_default {0, {0}}
+#define meshtastic_CrisislabMessage_Empty_init_default {0}
 #define meshtastic_CrisislabMessage_init_zero    {0, {0}}
+#define meshtastic_CrisislabMessage_Empty_init_zero {0}
 
 /* Field tags (for use in manual encoding/decoding) */
 #define meshtastic_CrisislabMessage_broadcast_interval_seconds_tag 1
 #define meshtastic_CrisislabMessage_channel_name_tag 2
+#define meshtastic_CrisislabMessage_update_routes_tag 3
+#define meshtastic_CrisislabMessage_ping_timestamp_tag 4
 
 /* Struct field encoding specification for nanopb */
 #define meshtastic_CrisislabMessage_FIELDLIST(X, a) \
 X(a, STATIC,   ONEOF,    UINT32,   (message,broadcast_interval_seconds,message.broadcast_interval_seconds),   1) \
-X(a, STATIC,   ONEOF,    STRING,   (message,channel_name,message.channel_name),   2)
+X(a, STATIC,   ONEOF,    STRING,   (message,channel_name,message.channel_name),   2) \
+X(a, STATIC,   ONEOF,    MESSAGE,  (message,update_routes,message.update_routes),   3) \
+X(a, STATIC,   ONEOF,    UINT64,   (message,ping_timestamp,message.ping_timestamp),   4)
 #define meshtastic_CrisislabMessage_CALLBACK NULL
 #define meshtastic_CrisislabMessage_DEFAULT NULL
+#define meshtastic_CrisislabMessage_message_update_routes_MSGTYPE meshtastic_CrisislabMessage_Empty
+
+#define meshtastic_CrisislabMessage_Empty_FIELDLIST(X, a) \
+
+#define meshtastic_CrisislabMessage_Empty_CALLBACK NULL
+#define meshtastic_CrisislabMessage_Empty_DEFAULT NULL
 
 extern const pb_msgdesc_t meshtastic_CrisislabMessage_msg;
+extern const pb_msgdesc_t meshtastic_CrisislabMessage_Empty_msg;
 
 /* Defines for backwards compatibility with code written before nanopb-0.4.0 */
 #define meshtastic_CrisislabMessage_fields &meshtastic_CrisislabMessage_msg
+#define meshtastic_CrisislabMessage_Empty_fields &meshtastic_CrisislabMessage_Empty_msg
 
 /* Maximum encoded size of messages (where known) */
 #define MESHTASTIC_MESHTASTIC_CRISISLAB_PB_H_MAX_SIZE meshtastic_CrisislabMessage_size
+#define meshtastic_CrisislabMessage_Empty_size   0
 #define meshtastic_CrisislabMessage_size         13
 
 #ifdef __cplusplus

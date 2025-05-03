@@ -62,7 +62,7 @@ void GatewayModule::mqttCallback(char *topic, byte *payload, unsigned int payloa
 	service->sendToMesh(mesh_packet);
 
 	// handle the message ourselves accordingly
-	CrisislabCommon::handleCrisislabMessage(message);
+	CrisislabCommon::handleCrisislabMessage(message, payload, payloadLength);
 }
 
 int32_t GatewayModule::runOnce()
