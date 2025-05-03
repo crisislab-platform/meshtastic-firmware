@@ -12,13 +12,11 @@
 #define MQTT_INCOMING_TOPIC "for-mesh"
 #define MQTT_INCOMING_TOPIC_LEN 8
 
+GatewayModule *gatewayModule;
+
 GatewayModule::GatewayModule() :
-	CrisislabCommon(),
-	SinglePortModule(
-		"crisislabgatewaymodule",
-		meshtastic_PortNum_CRISISLAB_GATEWAY_APP
-	),
-	concurrency::OSThread("GatewayModule")
+	CrisislabCommon("CrisislabGateway"),
+	concurrency::OSThread("CrisislabGateway")
 {
 	LOG_DEBUG("This node is a CRISiSLab gateway node");
 }
@@ -45,24 +43,23 @@ void GatewayModule::mqttCallback(char *topic, byte *payload, unsigned int payloa
 
 	// propogate the message to the mesh
 
-	meshtastic_MeshPacket *mesh_packet = router->allocForSending();
+	meshtastic_MeshPacket *meshPacket = this->allocMeshPacketWithBytes(payload, payloadLength);
 
-	mesh_packet->channel = CrisislabCommon::channelIndex;
-	mesh_packet->priority = meshtastic_MeshPacket_Priority_RELIABLE;
-	mesh_packet->decoded.portnum = meshtastic_PortNum_CRISISLAB_GATEWAY_APP;
-	mesh_packet->decoded.payload.size = payloadLength;
-	memcpy(mesh_packet->decoded.payload.bytes, payload, payloadLength);
-
-	if (mesh_packet->channel == 0) {
+	if (meshPacket->channel == 0) {
 		LOG_WARN("Crisislab modules are using the primary channel");
 	} else {
-		LOG_DEBUG("Using channel index %d for crisislab message", CrisislabCommon::channelIndex);
+		LOG_DEBUG("Using channel index %d for crisislab message", this->channelIndex);
 	}
 
-	service->sendToMesh(mesh_packet);
+	service->sendToMesh(meshPacket);
 
 	// handle the message ourselves accordingly
-	CrisislabCommon::handleCrisislabMessage(message, payload, payloadLength);
+	this->handleCrisislabMessage(message, payload, payloadLength);
+}
+
+void GatewayModule::mqttCallbackStaticWrapper(char *topic, byte *payload, unsigned int length)
+{
+	gatewayModule->mqttCallback(topic, payload, length);
 }
 
 int32_t GatewayModule::runOnce()
@@ -72,7 +69,7 @@ int32_t GatewayModule::runOnce()
 		return 3000; // wait 3s before running runOnce again
 	} else {
 		LOG_DEBUG("Got MQTT connection, overriding default MQTT behavior");
-		mqtt->setMqttCallback(mqttCallback);
+		mqtt->setMqttCallback(GatewayModule::mqttCallbackStaticWrapper);
 		mqtt->subscribe("for-mesh");
 		// disable this runOnce function
 		return disable();
@@ -83,11 +80,4 @@ ProcessMessage GatewayModule::handleReceived(const meshtastic_MeshPacket &packet
 {
 	LOG_INFO("GatewayModule received a packet"); // temporary. just for testing.
 	return ProcessMessage::CONTINUE;
-}
-
-bool GatewayModule::wantPacket(const meshtastic_MeshPacket *packet)
-{
-	// other gateways should not have any need to communicate with us so we only
-	// care about packets from the normal nodes
-	return packet->decoded.portnum == meshtastic_PortNum_CRISISLAB_NORMAL_APP;
 }

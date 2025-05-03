@@ -6,13 +6,12 @@
 #include "CrisislabCommon.h"
 #include "../../mesh/generated/meshtastic/crisislab.pb.h"
 
-class NormalNodeModule : public CrisislabCommon, public SinglePortModule
+class NormalNodeModule : public CrisislabCommon
 {
   public:
 	NormalNodeModule();
 
   protected:
 	virtual ProcessMessage handleReceived(const meshtastic_MeshPacket &packet) override;
-    virtual bool wantPacket(const meshtastic_MeshPacket *packet) override;
 };
 

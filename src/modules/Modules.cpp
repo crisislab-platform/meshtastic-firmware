@@ -146,7 +146,7 @@ void setupModules()
         new PowerStressModule();
 #endif
 #if MESHTASTIC_CRISISLAB_GATEWAY
-		new GatewayModule();
+		gatewayModule = new GatewayModule();
 #endif
 #if MESHTASTIC_CRISISLAB_NORMAL
 		new NormalNodeModule();

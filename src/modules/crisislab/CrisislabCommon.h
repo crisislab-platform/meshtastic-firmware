@@ -1,19 +1,26 @@
 #pragma once
 
 #include "../../mesh/generated/meshtastic/crisislab.pb.h"
+#include "SinglePortModule.h"
+#include "concurrency/OSThread.h"
 
-class CrisislabCommon
+class CrisislabCommon : public SinglePortModule
 {
   public:
-	CrisislabCommon();
+	CrisislabCommon(const char *name);
 
-	static ChannelIndex channelIndex;
+  protected:
+	ChannelIndex channelIndex = 0;
 
-	static bool isUpdatingRoutes;
+	bool isUpdatingRoutes = false;
+
+	meshtastic_MeshPacket *allocMeshPacket();
+
+	meshtastic_MeshPacket *allocMeshPacketWithBytes(const byte *bytes, const size_t length);
 
 	// for now this is the one function that will be called to handle each message,
 	// later it may need to be split into multiple functions.
-	static void handleCrisislabMessage(
+	void handleCrisislabMessage(
 		const meshtastic_CrisislabMessage &message,
 		const byte *payload,
 		const size_t payloadLength

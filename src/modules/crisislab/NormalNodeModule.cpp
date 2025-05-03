@@ -2,8 +2,7 @@
 #include "CrisislabCommon.h"
 
 NormalNodeModule::NormalNodeModule() :
-	CrisislabCommon(),
-	SinglePortModule("NormalNodeModule", meshtastic_PortNum_CRISISLAB_NORMAL_APP)
+	CrisislabCommon("CrisislabNormalNode")
 {
 	LOG_DEBUG("This node is a normal CRISiSLab node");
 }
@@ -28,10 +27,4 @@ ProcessMessage NormalNodeModule::handleReceived(const meshtastic_MeshPacket &pac
 	}
 
 	return ProcessMessage::STOP;
-}
-
-bool NormalNodeModule::wantPacket(const meshtastic_MeshPacket *packet)
-{
-	return packet->decoded.portnum == meshtastic_PortNum_CRISISLAB_NORMAL_APP ||
-		packet->decoded.portnum == meshtastic_PortNum_CRISISLAB_GATEWAY_APP;
 }

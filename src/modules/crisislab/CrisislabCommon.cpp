@@ -5,12 +5,8 @@
 #include "CrisislabCommon.h"
 #include "Router.h"
 
-// default to public channel
-ChannelIndex CrisislabCommon::channelIndex = 0;
-
-bool CrisislabCommon::isUpdatingRoutes = false;
-
-CrisislabCommon::CrisislabCommon()
+CrisislabCommon::CrisislabCommon(const char *name) :
+	SinglePortModule(name, meshtastic_PortNum_CRISISLAB_APP)
 {
 	Preferences preferences;
 	preferences.begin("crisislab", true);
@@ -52,6 +48,29 @@ CrisislabCommon::CrisislabCommon()
 	preferences.end();
 }
 
+meshtastic_MeshPacket *CrisislabCommon::allocMeshPacket()
+{
+	meshtastic_MeshPacket *meshPacket = router->allocForSending();
+
+	meshPacket->channel = this->channelIndex;
+	meshPacket->priority = meshtastic_MeshPacket_Priority_RELIABLE;
+	meshPacket->decoded.portnum = this->ourPortNum;
+
+	return meshPacket;
+}
+
+meshtastic_MeshPacket *CrisislabCommon::allocMeshPacketWithBytes(
+	const byte *bytes,
+	const size_t length
+) {
+	meshtastic_MeshPacket *meshPacket = this->allocMeshPacket();
+
+	meshPacket->decoded.payload.size = length;
+	memcpy(meshPacket->decoded.payload.bytes, bytes, length);
+
+	return meshPacket;
+}
+
 void CrisislabCommon::handleCrisislabMessage(
 	const meshtastic_CrisislabMessage &message,
 	const byte *encodedPayload,
@@ -82,13 +101,7 @@ void CrisislabCommon::handleCrisislabMessage(
 			break;
 		}
 		case meshtastic_CrisislabMessage_update_routes_tag: {
-			meshtastic_MeshPacket *meshPacket = router->allocForSending();
-
-			meshPacket->channel = CrisislabCommon::channelIndex;
-			meshPacket->priority = meshtastic_MeshPacket_Priority_RELIABLE;
-			meshPacket->decoded.portnum = meshtastic_PortNum_CRISISLAB_NORMAL_APP;
-			meshPacket->decoded.payload.size = payloadLength;
-			memcpy(meshPacket->decoded.payload.bytes, encodedPayload, payloadLength);
+			meshtastic_MeshPacket *meshPacket = this->allocMeshPacketWithBytes(encodedPayload, payloadLength);
 
 			break;
 		}
