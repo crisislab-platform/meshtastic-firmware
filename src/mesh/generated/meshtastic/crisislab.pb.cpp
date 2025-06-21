@@ -6,10 +6,37 @@
 #error Regenerate this file with the current version of nanopb generator.
 #endif
 
-PB_BIND(meshtastic_CrisislabMessage, meshtastic_CrisislabMessage, AUTO)
+PB_BIND(meshtastic_CrisislabMessage, meshtastic_CrisislabMessage, 2)
+
+
+PB_BIND(meshtastic_CrisislabMessage_SignalData, meshtastic_CrisislabMessage_SignalData, AUTO)
+
+
+PB_BIND(meshtastic_CrisislabMessage_SignalData_Entry, meshtastic_CrisislabMessage_SignalData_Entry, AUTO)
+
+
+PB_BIND(meshtastic_CrisislabMessage_MeshSettings, meshtastic_CrisislabMessage_MeshSettings, AUTO)
+
+
+PB_BIND(meshtastic_CrisislabMessage_ServerSettings, meshtastic_CrisislabMessage_ServerSettings, AUTO)
 
 
 PB_BIND(meshtastic_CrisislabMessage_Empty, meshtastic_CrisislabMessage_Empty, AUTO)
+
+
+PB_BIND(meshtastic_CrisislabMessage_Route, meshtastic_CrisislabMessage_Route, AUTO)
+
+
+PB_BIND(meshtastic_CrisislabMessage_RoutesList, meshtastic_CrisislabMessage_RoutesList, 2)
+
+
+PB_BIND(meshtastic_CrisislabMessage_RoutesMap, meshtastic_CrisislabMessage_RoutesMap, AUTO)
+
+
+PB_BIND(meshtastic_CrisislabMessage_RoutesMap_EntriesEntry, meshtastic_CrisislabMessage_RoutesMap_EntriesEntry, 2)
+
+
+PB_BIND(meshtastic_CrisislabMessage_LiveData, meshtastic_CrisislabMessage_LiveData, 2)
 
 
 

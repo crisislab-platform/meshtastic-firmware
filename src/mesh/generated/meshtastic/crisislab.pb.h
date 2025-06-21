@@ -4,23 +4,86 @@
 #ifndef PB_MESHTASTIC_MESHTASTIC_CRISISLAB_PB_H_INCLUDED
 #define PB_MESHTASTIC_MESHTASTIC_CRISISLAB_PB_H_INCLUDED
 #include <pb.h>
+#include "meshtastic/mesh.pb.h"
+#include "meshtastic/telemetry.pb.h"
 
 #if PB_PROTO_HEADER_VERSION != 40
 #error Regenerate this file with the current version of nanopb generator.
 #endif
 
 /* Struct definitions */
+typedef struct _meshtastic_CrisislabMessage_SignalData_Entry {
+    uint32_t from; /* node id */
+    int32_t rssi;
+    float snr;
+} meshtastic_CrisislabMessage_SignalData_Entry;
+
+typedef struct _meshtastic_CrisislabMessage_SignalData {
+    uint32_t to; /* node id */
+    bool is_gateway;
+    pb_size_t links_count;
+    meshtastic_CrisislabMessage_SignalData_Entry links[10];
+} meshtastic_CrisislabMessage_SignalData;
+
+typedef struct _meshtastic_CrisislabMessage_MeshSettings {
+    bool has_broadcast_interval_seconds;
+    uint32_t broadcast_interval_seconds;
+    bool has_channel_name;
+    char channel_name[12];
+    bool has_ping_timeout_seconds;
+    uint32_t ping_timeout_seconds;
+} meshtastic_CrisislabMessage_MeshSettings;
+
+typedef struct _meshtastic_CrisislabMessage_ServerSettings {
+    bool has_signal_data_timeout_seconds;
+    uint32_t signal_data_timeout_seconds;
+} meshtastic_CrisislabMessage_ServerSettings;
+
 typedef struct _meshtastic_CrisislabMessage_Empty {
     char dummy_field;
 } meshtastic_CrisislabMessage_Empty;
 
+typedef struct _meshtastic_CrisislabMessage_Route {
+    pb_size_t node_ids_count;
+    uint32_t node_ids[7];
+} meshtastic_CrisislabMessage_Route;
+
+typedef struct _meshtastic_CrisislabMessage_RoutesList {
+    pb_size_t routes_count;
+    meshtastic_CrisislabMessage_Route routes[10];
+} meshtastic_CrisislabMessage_RoutesList;
+
+typedef struct _meshtastic_CrisislabMessage_RoutesMap {
+    void * entries;
+} meshtastic_CrisislabMessage_RoutesMap;
+
+typedef struct _meshtastic_CrisislabMessage_RoutesMap_EntriesEntry {
+    uint32_t key;
+    bool has_value;
+    meshtastic_CrisislabMessage_RoutesList value;
+} meshtastic_CrisislabMessage_RoutesMap_EntriesEntry;
+
+typedef struct _meshtastic_CrisislabMessage_LiveData {
+    uint32_t node_num;
+    uint64_t timestamp; /* seconds since unix epoch */
+    bool has_user;
+    meshtastic_User user;
+    bool has_position;
+    meshtastic_Position position;
+    bool has_device_metrics;
+    meshtastic_DeviceMetrics device_metrics;
+} meshtastic_CrisislabMessage_LiveData;
+
 typedef struct _meshtastic_CrisislabMessage {
     pb_size_t which_message;
     union {
-        uint32_t broadcast_interval_seconds;
-        char channel_name[12];
-        meshtastic_CrisislabMessage_Empty update_routes;
-        uint64_t ping_timestamp;
+        meshtastic_CrisislabMessage_MeshSettings mesh_settings;
+        meshtastic_CrisislabMessage_ServerSettings server_settings;
+        meshtastic_CrisislabMessage_Empty update_routes_request;
+        uint64_t ping_timestamp; /* seconds since unix epoch */
+        meshtastic_CrisislabMessage_SignalData signal_data;
+        meshtastic_CrisislabMessage_RoutesMap updated_routes;
+        meshtastic_CrisislabMessage_LiveData live_data;
     } message;
 } meshtastic_CrisislabMessage;
 
@@ -30,43 +93,183 @@ extern "C" {
 #endif
 
 /* Initializer values for message structs */
-#define meshtastic_CrisislabMessage_init_default {0, {0}}
+#define meshtastic_CrisislabMessage_init_default {0, {meshtastic_CrisislabMessage_MeshSettings_init_default}}
+#define meshtastic_CrisislabMessage_SignalData_init_default {0, 0, 0, {meshtastic_CrisislabMessage_SignalData_Entry_init_default, meshtastic_CrisislabMessage_SignalData_Entry_init_default, meshtastic_CrisislabMessage_SignalData_Entry_init_default, meshtastic_CrisislabMessage_SignalData_Entry_init_default, meshtastic_CrisislabMessage_SignalData_Entry_init_default, meshtastic_CrisislabMessage_SignalData_Entry_init_default, meshtastic_CrisislabMessage_SignalData_Entry_init_default, meshtastic_CrisislabMessage_SignalData_Entry_init_default, meshtastic_CrisislabMessage_SignalData_Entry_init_default, meshtastic_CrisislabMessage_SignalData_Entry_init_default}}
+#define meshtastic_CrisislabMessage_SignalData_Entry_init_default {0, 0, 0}
+#define meshtastic_CrisislabMessage_MeshSettings_init_default {false, 0, false, "", false, 0}
+#define meshtastic_CrisislabMessage_ServerSettings_init_default {false, 0}
 #define meshtastic_CrisislabMessage_Empty_init_default {0}
-#define meshtastic_CrisislabMessage_init_zero    {0, {0}}
+#define meshtastic_CrisislabMessage_Route_init_default {0, {0, 0, 0, 0, 0, 0, 0}}
+#define meshtastic_CrisislabMessage_RoutesList_init_default {0, {meshtastic_CrisislabMessage_Route_init_default, meshtastic_CrisislabMessage_Route_init_default, meshtastic_CrisislabMessage_Route_init_default, meshtastic_CrisislabMessage_Route_init_default, meshtastic_CrisislabMessage_Route_init_default, meshtastic_CrisislabMessage_Route_init_default, meshtastic_CrisislabMessage_Route_init_default, meshtastic_CrisislabMessage_Route_init_default, meshtastic_CrisislabMessage_Route_init_default, meshtastic_CrisislabMessage_Route_init_default}}
+#define meshtastic_CrisislabMessage_RoutesMap_init_default {NULL}
+#define meshtastic_CrisislabMessage_RoutesMap_EntriesEntry_init_default {0, false, meshtastic_CrisislabMessage_RoutesList_init_default}
+#define meshtastic_CrisislabMessage_LiveData_init_default {0, 0, false, meshtastic_User_init_default, false, meshtastic_Position_init_default, false, meshtastic_DeviceMetrics_init_default}
+#define meshtastic_CrisislabMessage_init_zero    {0, {meshtastic_CrisislabMessage_MeshSettings_init_zero}}
+#define meshtastic_CrisislabMessage_SignalData_init_zero {0, 0, 0, {meshtastic_CrisislabMessage_SignalData_Entry_init_zero, meshtastic_CrisislabMessage_SignalData_Entry_init_zero, meshtastic_CrisislabMessage_SignalData_Entry_init_zero, meshtastic_CrisislabMessage_SignalData_Entry_init_zero, meshtastic_CrisislabMessage_SignalData_Entry_init_zero, meshtastic_CrisislabMessage_SignalData_Entry_init_zero, meshtastic_CrisislabMessage_SignalData_Entry_init_zero, meshtastic_CrisislabMessage_SignalData_Entry_init_zero, meshtastic_CrisislabMessage_SignalData_Entry_init_zero, meshtastic_CrisislabMessage_SignalData_Entry_init_zero}}
+#define meshtastic_CrisislabMessage_SignalData_Entry_init_zero {0, 0, 0}
+#define meshtastic_CrisislabMessage_MeshSettings_init_zero {false, 0, false, "", false, 0}
+#define meshtastic_CrisislabMessage_ServerSettings_init_zero {false, 0}
 #define meshtastic_CrisislabMessage_Empty_init_zero {0}
+#define meshtastic_CrisislabMessage_Route_init_zero {0, {0, 0, 0, 0, 0, 0, 0}}
+#define meshtastic_CrisislabMessage_RoutesList_init_zero {0, {meshtastic_CrisislabMessage_Route_init_zero, meshtastic_CrisislabMessage_Route_init_zero, meshtastic_CrisislabMessage_Route_init_zero, meshtastic_CrisislabMessage_Route_init_zero, meshtastic_CrisislabMessage_Route_init_zero, meshtastic_CrisislabMessage_Route_init_zero, meshtastic_CrisislabMessage_Route_init_zero, meshtastic_CrisislabMessage_Route_init_zero, meshtastic_CrisislabMessage_Route_init_zero, meshtastic_CrisislabMessage_Route_init_zero}}
+#define meshtastic_CrisislabMessage_RoutesMap_init_zero {NULL}
+#define meshtastic_CrisislabMessage_RoutesMap_EntriesEntry_init_zero {0, false, meshtastic_CrisislabMessage_RoutesList_init_zero}
+#define meshtastic_CrisislabMessage_LiveData_init_zero {0, 0, false, meshtastic_User_init_zero, false, meshtastic_Position_init_zero, false, meshtastic_DeviceMetrics_init_zero}
 
 /* Field tags (for use in manual encoding/decoding) */
-#define meshtastic_CrisislabMessage_broadcast_interval_seconds_tag 1
-#define meshtastic_CrisislabMessage_channel_name_tag 2
-#define meshtastic_CrisislabMessage_update_routes_tag 3
+#define meshtastic_CrisislabMessage_SignalData_Entry_from_tag 1
+#define meshtastic_CrisislabMessage_SignalData_Entry_rssi_tag 2
+#define meshtastic_CrisislabMessage_SignalData_Entry_snr_tag 3
+#define meshtastic_CrisislabMessage_SignalData_to_tag 1
+#define meshtastic_CrisislabMessage_SignalData_is_gateway_tag 2
+#define meshtastic_CrisislabMessage_SignalData_links_tag 3
+#define meshtastic_CrisislabMessage_MeshSettings_broadcast_interval_seconds_tag 1
+#define meshtastic_CrisislabMessage_MeshSettings_channel_name_tag 2
+#define meshtastic_CrisislabMessage_MeshSettings_ping_timeout_seconds_tag 3
+#define meshtastic_CrisislabMessage_ServerSettings_signal_data_timeout_seconds_tag 1
+#define meshtastic_CrisislabMessage_Route_node_ids_tag 1
+#define meshtastic_CrisislabMessage_RoutesList_routes_tag 1
+#define meshtastic_CrisislabMessage_RoutesMap_entries_tag 1
+#define meshtastic_CrisislabMessage_RoutesMap_EntriesEntry_key_tag 1
+#define meshtastic_CrisislabMessage_RoutesMap_EntriesEntry_value_tag 2
+#define meshtastic_CrisislabMessage_LiveData_node_num_tag 1
+#define meshtastic_CrisislabMessage_LiveData_timestamp_tag 2
+#define meshtastic_CrisislabMessage_LiveData_user_tag 3
+#define meshtastic_CrisislabMessage_LiveData_position_tag 4
+#define meshtastic_CrisislabMessage_LiveData_device_metrics_tag 5
+#define meshtastic_CrisislabMessage_mesh_settings_tag 1
+#define meshtastic_CrisislabMessage_server_settings_tag 2
+#define meshtastic_CrisislabMessage_update_routes_request_tag 3
 #define meshtastic_CrisislabMessage_ping_timestamp_tag 4
+#define meshtastic_CrisislabMessage_signal_data_tag 5
+#define meshtastic_CrisislabMessage_updated_routes_tag 6
+#define meshtastic_CrisislabMessage_live_data_tag 7
 
 /* Struct field encoding specification for nanopb */
 #define meshtastic_CrisislabMessage_FIELDLIST(X, a) \
-X(a, STATIC,   ONEOF,    UINT32,   (message,broadcast_interval_seconds,message.broadcast_interval_seconds),   1) \
-X(a, STATIC,   ONEOF,    STRING,   (message,channel_name,message.channel_name),   2) \
-X(a, STATIC,   ONEOF,    MESSAGE,  (message,update_routes,message.update_routes),   3) \
-X(a, STATIC,   ONEOF,    UINT64,   (message,ping_timestamp,message.ping_timestamp),   4)
+X(a, STATIC,   ONEOF,    MESSAGE,  (message,mesh_settings,message.mesh_settings),   1) \
+X(a, STATIC,   ONEOF,    MESSAGE,  (message,server_settings,message.server_settings),   2) \
+X(a, STATIC,   ONEOF,    MESSAGE,  (message,update_routes_request,message.update_routes_request),   3) \
+X(a, STATIC,   ONEOF,    UINT64,   (message,ping_timestamp,message.ping_timestamp),   4) \
+X(a, STATIC,   ONEOF,    MESSAGE,  (message,signal_data,message.signal_data),   5) \
+X(a, STATIC,   ONEOF,    MESSAGE,  (message,updated_routes,message.updated_routes),   6) \
+X(a, STATIC,   ONEOF,    MESSAGE,  (message,live_data,message.live_data),   7)
 #define meshtastic_CrisislabMessage_CALLBACK NULL
 #define meshtastic_CrisislabMessage_DEFAULT NULL
-#define meshtastic_CrisislabMessage_message_update_routes_MSGTYPE meshtastic_CrisislabMessage_Empty
+#define meshtastic_CrisislabMessage_message_mesh_settings_MSGTYPE meshtastic_CrisislabMessage_MeshSettings
+#define meshtastic_CrisislabMessage_message_server_settings_MSGTYPE meshtastic_CrisislabMessage_ServerSettings
+#define meshtastic_CrisislabMessage_message_update_routes_request_MSGTYPE meshtastic_CrisislabMessage_Empty
+#define meshtastic_CrisislabMessage_message_signal_data_MSGTYPE meshtastic_CrisislabMessage_SignalData
+#define meshtastic_CrisislabMessage_message_updated_routes_MSGTYPE meshtastic_CrisislabMessage_RoutesMap
+#define meshtastic_CrisislabMessage_message_live_data_MSGTYPE meshtastic_CrisislabMessage_LiveData
+
+#define meshtastic_CrisislabMessage_SignalData_FIELDLIST(X, a) \
+X(a, STATIC,   SINGULAR, UINT32,   to,                1) \
+X(a, STATIC,   SINGULAR, BOOL,     is_gateway,        2) \
+X(a, STATIC,   REPEATED, MESSAGE,  links,             3)
+#define meshtastic_CrisislabMessage_SignalData_CALLBACK NULL
+#define meshtastic_CrisislabMessage_SignalData_DEFAULT NULL
+#define meshtastic_CrisislabMessage_SignalData_links_MSGTYPE meshtastic_CrisislabMessage_SignalData_Entry
+
+#define meshtastic_CrisislabMessage_SignalData_Entry_FIELDLIST(X, a) \
+X(a, STATIC,   SINGULAR, UINT32,   from,              1) \
+X(a, STATIC,   SINGULAR, INT32,    rssi,              2) \
+X(a, STATIC,   SINGULAR, FLOAT,    snr,               3)
+#define meshtastic_CrisislabMessage_SignalData_Entry_CALLBACK NULL
+#define meshtastic_CrisislabMessage_SignalData_Entry_DEFAULT NULL
+
+#define meshtastic_CrisislabMessage_MeshSettings_FIELDLIST(X, a) \
+X(a, STATIC,   OPTIONAL, UINT32,   broadcast_interval_seconds,   1) \
+X(a, STATIC,   OPTIONAL, STRING,   channel_name,      2) \
+X(a, STATIC,   OPTIONAL, UINT32,   ping_timeout_seconds,   3)
+#define meshtastic_CrisislabMessage_MeshSettings_CALLBACK NULL
+#define meshtastic_CrisislabMessage_MeshSettings_DEFAULT NULL
+
+#define meshtastic_CrisislabMessage_ServerSettings_FIELDLIST(X, a) \
+X(a, STATIC,   OPTIONAL, UINT32,   signal_data_timeout_seconds,   1)
+#define meshtastic_CrisislabMessage_ServerSettings_CALLBACK NULL
+#define meshtastic_CrisislabMessage_ServerSettings_DEFAULT NULL
 
 #define meshtastic_CrisislabMessage_Empty_FIELDLIST(X, a) \
 
 #define meshtastic_CrisislabMessage_Empty_CALLBACK NULL
 #define meshtastic_CrisislabMessage_Empty_DEFAULT NULL
 
+#define meshtastic_CrisislabMessage_Route_FIELDLIST(X, a) \
+X(a, STATIC,   REPEATED, UINT32,   node_ids,          1)
+#define meshtastic_CrisislabMessage_Route_CALLBACK NULL
+#define meshtastic_CrisislabMessage_Route_DEFAULT NULL
+
+#define meshtastic_CrisislabMessage_RoutesList_FIELDLIST(X, a) \
+X(a, STATIC,   REPEATED, MESSAGE,  routes,            1)
+#define meshtastic_CrisislabMessage_RoutesList_CALLBACK NULL
+#define meshtastic_CrisislabMessage_RoutesList_DEFAULT NULL
+#define meshtastic_CrisislabMessage_RoutesList_routes_MSGTYPE meshtastic_CrisislabMessage_Route
+
+#define meshtastic_CrisislabMessage_RoutesMap_FIELDLIST(X, a) \
+X(a, CALLBACK, REPEATED, MESSAGE,  entries,           1)
+extern bool meshtastic_CrisislabMessage_RoutesMap_callback(pb_istream_t *istream, pb_ostream_t *ostream, const pb_field_t *field);
+#define meshtastic_CrisislabMessage_RoutesMap_CALLBACK meshtastic_CrisislabMessage_RoutesMap_callback
+#define meshtastic_CrisislabMessage_RoutesMap_DEFAULT NULL
+#define meshtastic_CrisislabMessage_RoutesMap_entries_MSGTYPE meshtastic_CrisislabMessage_RoutesMap_EntriesEntry
+
+#define meshtastic_CrisislabMessage_RoutesMap_EntriesEntry_FIELDLIST(X, a) \
+X(a, STATIC,   SINGULAR, UINT32,   key,               1) \
+X(a, STATIC,   OPTIONAL, MESSAGE,  value,             2)
+#define meshtastic_CrisislabMessage_RoutesMap_EntriesEntry_CALLBACK NULL
+#define meshtastic_CrisislabMessage_RoutesMap_EntriesEntry_DEFAULT NULL
+#define meshtastic_CrisislabMessage_RoutesMap_EntriesEntry_value_MSGTYPE meshtastic_CrisislabMessage_RoutesList
+
+#define meshtastic_CrisislabMessage_LiveData_FIELDLIST(X, a) \
+X(a, STATIC,   SINGULAR, UINT32,   node_num,          1) \
+X(a, STATIC,   SINGULAR, UINT64,   timestamp,         2) \
+X(a, STATIC,   OPTIONAL, MESSAGE,  user,              3) \
+X(a, STATIC,   OPTIONAL, MESSAGE,  position,          4) \
+X(a, STATIC,   OPTIONAL, MESSAGE,  device_metrics,    5)
+#define meshtastic_CrisislabMessage_LiveData_CALLBACK NULL
+#define meshtastic_CrisislabMessage_LiveData_DEFAULT NULL
+#define meshtastic_CrisislabMessage_LiveData_user_MSGTYPE meshtastic_User
+#define meshtastic_CrisislabMessage_LiveData_position_MSGTYPE meshtastic_Position
+#define meshtastic_CrisislabMessage_LiveData_device_metrics_MSGTYPE meshtastic_DeviceMetrics
+
 extern const pb_msgdesc_t meshtastic_CrisislabMessage_msg;
+extern const pb_msgdesc_t meshtastic_CrisislabMessage_SignalData_msg;
+extern const pb_msgdesc_t meshtastic_CrisislabMessage_SignalData_Entry_msg;
+extern const pb_msgdesc_t meshtastic_CrisislabMessage_MeshSettings_msg;
+extern const pb_msgdesc_t meshtastic_CrisislabMessage_ServerSettings_msg;
 extern const pb_msgdesc_t meshtastic_CrisislabMessage_Empty_msg;
+extern const pb_msgdesc_t meshtastic_CrisislabMessage_Route_msg;
+extern const pb_msgdesc_t meshtastic_CrisislabMessage_RoutesList_msg;
+extern const pb_msgdesc_t meshtastic_CrisislabMessage_RoutesMap_msg;
+extern const pb_msgdesc_t meshtastic_CrisislabMessage_RoutesMap_EntriesEntry_msg;
+extern const pb_msgdesc_t meshtastic_CrisislabMessage_LiveData_msg;
 
 /* Defines for backwards compatibility with code written before nanopb-0.4.0 */
 #define meshtastic_CrisislabMessage_fields &meshtastic_CrisislabMessage_msg
+#define meshtastic_CrisislabMessage_SignalData_fields &meshtastic_CrisislabMessage_SignalData_msg
+#define meshtastic_CrisislabMessage_SignalData_Entry_fields &meshtastic_CrisislabMessage_SignalData_Entry_msg
+#define meshtastic_CrisislabMessage_MeshSettings_fields &meshtastic_CrisislabMessage_MeshSettings_msg
+#define meshtastic_CrisislabMessage_ServerSettings_fields &meshtastic_CrisislabMessage_ServerSettings_msg
 #define meshtastic_CrisislabMessage_Empty_fields &meshtastic_CrisislabMessage_Empty_msg
+#define meshtastic_CrisislabMessage_Route_fields &meshtastic_CrisislabMessage_Route_msg
+#define meshtastic_CrisislabMessage_RoutesList_fields &meshtastic_CrisislabMessage_RoutesList_msg
+#define meshtastic_CrisislabMessage_RoutesMap_fields &meshtastic_CrisislabMessage_RoutesMap_msg
+#define meshtastic_CrisislabMessage_RoutesMap_EntriesEntry_fields &meshtastic_CrisislabMessage_RoutesMap_EntriesEntry_msg
+#define meshtastic_CrisislabMessage_LiveData_fields &meshtastic_CrisislabMessage_LiveData_msg
 
 /* Maximum encoded size of messages (where known) */
-#define MESHTASTIC_MESHTASTIC_CRISISLAB_PB_H_MAX_SIZE meshtastic_CrisislabMessage_size
+/* meshtastic_CrisislabMessage_size depends on runtime parameters */
+/* meshtastic_CrisislabMessage_RoutesMap_size depends on runtime parameters */
+#define MESHTASTIC_MESHTASTIC_CRISISLAB_PB_H_MAX_SIZE meshtastic_CrisislabMessage_RoutesMap_EntriesEntry_size
 #define meshtastic_CrisislabMessage_Empty_size   0
-#define meshtastic_CrisislabMessage_size         13
+#define meshtastic_CrisislabMessage_LiveData_size 308
+#define meshtastic_CrisislabMessage_MeshSettings_size 25
+#define meshtastic_CrisislabMessage_Route_size   42
+#define meshtastic_CrisislabMessage_RoutesList_size 440
+#define meshtastic_CrisislabMessage_RoutesMap_EntriesEntry_size 449
+#define meshtastic_CrisislabMessage_ServerSettings_size 6
+#define meshtastic_CrisislabMessage_SignalData_Entry_size 22
+#define meshtastic_CrisislabMessage_SignalData_size 248
 
 #ifdef __cplusplus
 } /* extern "C" */

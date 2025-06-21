@@ -700,17 +700,24 @@ void MQTT::onSend(const meshtastic_MeshPacket &mp_encrypted, const meshtastic_Me
 #endif // ARCH_NRF52 NRF52_USE_JSON
     } else {
         LOG_INFO("MQTT not connected, queue packet");
-        QueueEntry *entry;
-        if (mqttQueue.numFree() == 0) {
-            LOG_WARN("MQTT queue is full, discard oldest");
-            entry = mqttQueue.dequeuePtr(0);
-        } else {
-            entry = new QueueEntry;
-        }
-        entry->topic = std::move(topic);
-        entry->envBytes.assign(bytes, numBytes);
-        assert(mqttQueue.enqueue(entry, 0));
+		enqueueMessage(topic, bytes, numBytes);
     }
+}
+
+void MQTT::enqueueMessage(const std::string topic, const uint8_t *payload, size_t length) {
+	QueueEntry *entry;
+
+	if (mqttQueue.numFree() == 0) {
+		LOG_WARN("MQTT queue is full, discard oldest");
+		entry = mqttQueue.dequeuePtr(0);
+	} else {
+		entry = new QueueEntry;
+	}
+
+	entry->topic = std::move(topic);
+	entry->envBytes.assign(bytes, length);
+
+	assert(mqttQueue.enqueue(entry, 0));
 }
 
 void MQTT::perhapsReportToMap()

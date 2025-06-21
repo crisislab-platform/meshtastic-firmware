@@ -69,6 +69,8 @@ class MQTT : private concurrency::OSThread
 
 	bool subscribe(const char *topic);
 
+	void enqueueMessage(const std::string topic, const uint8_t *payload, size_t length);
+
   protected:
     struct QueueEntry {
         std::string topic;
