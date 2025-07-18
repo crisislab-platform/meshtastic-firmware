@@ -2,16 +2,16 @@
 #include "CrisislabCommon.h"
 #include "GatewayModule.h"
 
+NormalNodeModule *normalNodeModule;
+
 NormalNodeModule::NormalNodeModule() :
 	CrisislabCommon("CrisislabNormalNode")
 {
 	LOG_DEBUG("This node is a normal CRISiSLab node");
 }
 
-ProcessMessage NormalNodeModule::handleReceived(const meshtastic_MeshPacket &packet)
+void NormalNodeModule::handleNormalMeshPacket(const meshtastic_MeshPacket &packet)
 {
-	LOG_DEBUG("NormalNodeModule::handleReceived is running");
-
 	meshtastic_CrisislabMessage message;
 
 	if (!this->decodeCrisislabMessageFromBytes(
@@ -24,6 +24,4 @@ ProcessMessage NormalNodeModule::handleReceived(const meshtastic_MeshPacket &pac
 		LOG_DEBUG("NormalNodeModule::handleReceived - decoded crisislab message");
 		this->handleCrisislabMessage(message, &packet);
 	}
-
-	return ProcessMessage::STOP;
 }

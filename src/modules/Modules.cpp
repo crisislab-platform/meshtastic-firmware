@@ -149,7 +149,7 @@ void setupModules()
 		gatewayModule = new GatewayModule();
 #endif
 #if MESHTASTIC_CRISISLAB_NORMAL
-		new NormalNodeModule();
+		normalNodeModule = new NormalNodeModule();
 #endif
         // Example: Put your module here
         // new ReplyModule();
@@ -200,7 +200,7 @@ void setupModules()
         cannedMessageModule = new CannedMessageModule();
 #endif
 #if HAS_TELEMETRY
-        new DeviceTelemetryModule();
+        deviceTelemetryModule = new DeviceTelemetryModule();
 #endif
 #if HAS_SENSOR && !MESHTASTIC_EXCLUDE_ENVIRONMENTAL_SENSOR
         new EnvironmentTelemetryModule();

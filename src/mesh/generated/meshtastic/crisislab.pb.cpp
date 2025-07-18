@@ -24,16 +24,13 @@ PB_BIND(meshtastic_CrisislabMessage_ServerSettings, meshtastic_CrisislabMessage_
 PB_BIND(meshtastic_CrisislabMessage_Empty, meshtastic_CrisislabMessage_Empty, AUTO)
 
 
-PB_BIND(meshtastic_CrisislabMessage_Route, meshtastic_CrisislabMessage_Route, AUTO)
+PB_BIND(meshtastic_CrisislabMessage_NextHops, meshtastic_CrisislabMessage_NextHops, AUTO)
 
 
-PB_BIND(meshtastic_CrisislabMessage_RoutesList, meshtastic_CrisislabMessage_RoutesList, 2)
+PB_BIND(meshtastic_CrisislabMessage_NextHopsMap, meshtastic_CrisislabMessage_NextHopsMap, AUTO)
 
 
-PB_BIND(meshtastic_CrisislabMessage_RoutesMap, meshtastic_CrisislabMessage_RoutesMap, AUTO)
-
-
-PB_BIND(meshtastic_CrisislabMessage_RoutesMap_EntriesEntry, meshtastic_CrisislabMessage_RoutesMap_EntriesEntry, 2)
+PB_BIND(meshtastic_CrisislabMessage_NextHopsMap_EntriesEntry, meshtastic_CrisislabMessage_NextHopsMap_EntriesEntry, AUTO)
 
 
 PB_BIND(meshtastic_CrisislabMessage_LiveData, meshtastic_CrisislabMessage_LiveData, 2)

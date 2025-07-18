@@ -54,13 +54,9 @@ void GatewayModule::mqttCallback(char *topic, byte *payload, unsigned int payloa
 	}
 
 	// broadcast message to the rest of the mesh to handle too
-	service->sendToMesh(meshPacket);
-
-	LOG_DEBUG("GatewayModule sent packet to mesh");
-
-	if (message.which_message == meshtastic_CrisislabMessage_updated_routes_tag) {
-		LOG_DEBUG("Gateway got updated routes. Map is at %p. Contains %zu entries", 
-			CrisislabCommon::routesMapPtr.get(), CrisislabCommon::routesMapPtr->size());
+	if (message.which_message != meshtastic_CrisislabMessage_get_mesh_settings_request_tag) {
+		service->sendToMesh(meshPacket);
+		LOG_DEBUG("GatewayModule sent packet to mesh");
 	}
 
 	// handle the message locally as well
@@ -89,15 +85,15 @@ int32_t GatewayModule::runOnce()
 // publish to broker if we're connected, otherwise put in queue for when we do connect later
 void GatewayModule::tryMqttPublish(const uint8_t *payload, size_t length) {
 	if (moduleConfig.mqtt.proxy_to_client_enabled || mqtt->isConnectedDirectly()) {
-		LOG_DEBUG("MQTT is connected, sending signal data");
-		mqtt->publish( GatewayModule::MQTT_OUTGOING_TOPIC, payload, length, false);
+		LOG_DEBUG("MQTT is connected, message sent to broker from CRISiSLab gateway");
+		mqtt->publish(GatewayModule::MQTT_OUTGOING_TOPIC, payload, length, false);
 	} else {
 		LOG_INFO("MQTT not connected, queueing signal data packet");
 		mqtt->enqueueMessage(std::string(GatewayModule::MQTT_OUTGOING_TOPIC), payload, length);
 	}
 }
 
-ProcessMessage GatewayModule::handleReceived(const meshtastic_MeshPacket &packet)
+void GatewayModule::handleNormalMeshPacket(const meshtastic_MeshPacket &packet)
 {
 	meshtastic_CrisislabMessage message;
 
@@ -110,6 +106,4 @@ ProcessMessage GatewayModule::handleReceived(const meshtastic_MeshPacket &packet
 	} else {
 		this->handleCrisislabMessage(message, &packet);
 	}
-
-	return ProcessMessage::STOP;
 }

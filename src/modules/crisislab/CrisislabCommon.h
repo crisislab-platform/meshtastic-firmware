@@ -6,24 +6,37 @@
 #include <vector>
 #include <map>
 
-class CrisislabCommon : public SinglePortModule
+class CrisislabCommon : public MeshModule
 {
   public:
 	CrisislabCommon(const char *name);
 
-	static std::unique_ptr<std::map<uint32_t, meshtastic_CrisislabMessage_RoutesList>> routesMapPtr;
+	static std::unique_ptr<std::map<uint32_t, meshtastic_CrisislabMessage_NextHops>> nextHopsMapPtr;
 
   protected:
+	meshtastic_PortNum primaryPortNum = meshtastic_PortNum_CRISISLAB_APP_PRIMARY;
+	meshtastic_PortNum livePortNum = meshtastic_PortNum_CRISISLAB_APP_LIVE;
+
+    virtual bool wantPacket(const meshtastic_MeshPacket *p) override {
+		return p->decoded.portnum == primaryPortNum
+			|| p->decoded.portnum == livePortNum
+			|| p->decoded.portnum == meshtastic_PortNum_ROUTING_APP;
+	}
+
+	virtual ProcessMessage handleReceived(const meshtastic_MeshPacket &meshPacket) override;
+
 	ChannelIndex channelIndex = 0;
-
-	bool ignoreUpdateRoutesPackets = false;
+	bool ignoreUpdateNextHopsRequestPackets = false;
 	bool isCollectingPings = false;
-	const static unsigned int pingCollectionTimeout = 50000; // ms
 	std::vector<meshtastic_CrisislabMessage_SignalData_Entry> signalDataEntries;
+	TaskHandle_t liveDataTaskHandle = nullptr;
 
-	// static std::unique_ptr<std::map<uint32_t, meshtastic_CrisislabMessage_RoutesList>> routesMapPtr;
+	meshtastic_MeshPacket *allocMeshPacket(
+		NodeNum to = NODENUM_BROADCAST,
+		meshtastic_PortNum portNum = meshtastic_PortNum_CRISISLAB_APP_PRIMARY
+	);
 
-	meshtastic_MeshPacket *allocMeshPacket(NodeNum to = NODENUM_BROADCAST);
+	uint64_t secondsSinceEpoch();
 
 	// for now this is the one function that will be called to handle each message,
 	// later it may need to be split into multiple functions.
@@ -32,6 +45,7 @@ class CrisislabCommon : public SinglePortModule
 		const meshtastic_MeshPacket *meshPacket
 	);
 
+	static void sendLiveData(void *params);
 	static void returnSignalData(void *params);
 
 	bool decodeCrisislabMessageFromBytes(

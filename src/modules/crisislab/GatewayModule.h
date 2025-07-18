@@ -17,17 +17,14 @@ class GatewayModule : public CrisislabCommon, private concurrency::OSThread
 	const static constexpr int MQTT_INCOMING_TOPIC_LEN = 8;
 
 	static void tryMqttPublish(const uint8_t *payload, size_t length);
+	void handleNormalMeshPacket(const meshtastic_MeshPacket &packet);
 
   protected:
-	virtual ProcessMessage handleReceived(const meshtastic_MeshPacket &packet) override;
 	virtual int32_t runOnce() override;
 
   private:
 	void mqttCallback(char *topic, byte *payload, unsigned int length);
 	static void mqttCallbackStaticWrapper(char *topic, byte *payload, unsigned int length);
 };
-
-extern bool decodeRoutesMapEntries(pb_istream_t *stream, const pb_field_iter_t *field, void **arg);
-extern bool decodeCrisislabMessageFromBytes(byte *buffer, unsigned int bufferLength, meshtastic_CrisislabMessage *msg);
 
 extern GatewayModule *gatewayModule;

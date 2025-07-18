@@ -22,6 +22,8 @@ class DeviceTelemetryModule : private concurrency::OSThread, public ProtobufModu
     }
     virtual bool wantUIFrame() { return false; }
 
+    meshtastic_Telemetry getDeviceTelemetry();
+
   protected:
     /** Called to handle a particular incoming message
     @return true if you've guaranteed you've handled this message and no other handlers should be considered for it
@@ -41,7 +43,6 @@ class DeviceTelemetryModule : private concurrency::OSThread, public ProtobufModu
     uint32_t getUptimeSeconds() { return (0xFFFFFFFF / 1000) * uptimeWrapCount + (uptimeLastMs / 1000); }
 
   private:
-    meshtastic_Telemetry getDeviceTelemetry();
     meshtastic_Telemetry getLocalStatsTelemetry();
 
     void sendLocalStatsToPhone();
@@ -63,3 +64,5 @@ class DeviceTelemetryModule : private concurrency::OSThread, public ProtobufModu
     uint32_t uptimeWrapCount;
     uint32_t uptimeLastMs;
 };
+
+extern DeviceTelemetryModule *deviceTelemetryModule;

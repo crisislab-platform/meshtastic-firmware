@@ -135,8 +135,10 @@ typedef enum _meshtastic_PortNum {
     /* ATAK Forwarder Module https://github.com/paulmandal/atak-forwarder
  ENCODING: libcotshrink */
     meshtastic_PortNum_ATAK_FORWARDER = 257,
-    /* CRISiSLab: For modules in CRISiSLab's Meshtastic Portal project. */
-    meshtastic_PortNum_CRISISLAB_APP = 258,
+    /* CRISiSLab: Default port num for modules in CRISiSLab's Meshtastic Portal project. */
+    meshtastic_PortNum_CRISISLAB_APP_PRIMARY = 258,
+    /* CRISiSLab: Secondary port for CRISiSLab for sending live data */
+    meshtastic_PortNum_CRISISLAB_APP_LIVE = 259,
     /* Currently we limit port nums to no higher than this value */
     meshtastic_PortNum_MAX = 511
 } meshtastic_PortNum;
