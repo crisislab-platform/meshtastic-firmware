@@ -3,4 +3,4 @@
 	url = https://github.com/meshtastic/meshTestic
 [submodule "protobufs"]
 	path = protobufs
-	url = https://github.com/tobyck/crisislab-meshtastic-protobufs.git
+	url = https://github.com/crisislab-platform/meshtastic-protobufs.git
