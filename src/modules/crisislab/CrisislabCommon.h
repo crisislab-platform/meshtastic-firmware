@@ -17,6 +17,8 @@ class CrisislabCommon : public MeshModule
 	meshtastic_PortNum primaryPortNum = meshtastic_PortNum_CRISISLAB_APP_PRIMARY;
 	meshtastic_PortNum livePortNum = meshtastic_PortNum_CRISISLAB_APP_LIVE;
 
+	const static unsigned int pingCollectionTimeout = 50000; // ms
+
     virtual bool wantPacket(const meshtastic_MeshPacket *p) override {
 		return p->decoded.portnum == primaryPortNum
 			|| p->decoded.portnum == livePortNum
