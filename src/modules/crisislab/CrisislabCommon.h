@@ -17,7 +17,7 @@ class CrisislabCommon : public MeshModule
 	meshtastic_PortNum primaryPortNum = meshtastic_PortNum_CRISISLAB_APP_PRIMARY;
 	meshtastic_PortNum livePortNum = meshtastic_PortNum_CRISISLAB_APP_LIVE;
 
-	const static unsigned int pingCollectionTimeout = 50000; // ms
+	const static unsigned int pingCollectionTimeoutSeconds = 50;
 
     virtual bool wantPacket(const meshtastic_MeshPacket *p) override {
 		return p->decoded.portnum == primaryPortNum
@@ -43,11 +43,11 @@ class CrisislabCommon : public MeshModule
 	// for now this is the one function that will be called to handle each message,
 	// later it may need to be split into multiple functions.
 	void handleCrisislabMessage(
-		const meshtastic_CrisislabMessage &message,
+		meshtastic_CrisislabMessage &message,
 		const meshtastic_MeshPacket *meshPacket
 	);
 
-	static void sendLiveData(void *params);
+	static void sendLiveTelemetry(void *params);
 	static void returnSignalData(void *params);
 
 	bool decodeCrisislabMessageFromBytes(

@@ -33,7 +33,7 @@ PB_BIND(meshtastic_CrisislabMessage_NextHopsMap, meshtastic_CrisislabMessage_Nex
 PB_BIND(meshtastic_CrisislabMessage_NextHopsMap_EntriesEntry, meshtastic_CrisislabMessage_NextHopsMap_EntriesEntry, AUTO)
 
 
-PB_BIND(meshtastic_CrisislabMessage_LiveData, meshtastic_CrisislabMessage_LiveData, 2)
+PB_BIND(meshtastic_CrisislabMessage_Telemetry, meshtastic_CrisislabMessage_Telemetry, 2)
 
 
 

@@ -81,9 +81,9 @@ CrisislabCommon::CrisislabCommon(const char *name) :
 	// log preferences
 
 	const std::string prefNames[] = {
-		"bcast_interval",
+		"bcast_int_s",
 		"channel_name",
-		"ping_timeout"
+		"ping_timeout_s"
 	};
 
 	for (const auto &pref : prefNames) {
@@ -136,7 +136,7 @@ meshtastic_MeshPacket *CrisislabCommon::allocMeshPacket(NodeNum to, meshtastic_P
 }
 
 void CrisislabCommon::handleCrisislabMessage(
-	const meshtastic_CrisislabMessage &message,
+	meshtastic_CrisislabMessage &message,
 	const meshtastic_MeshPacket *meshPacket
 ) {
 	switch (message.which_message) {
@@ -155,12 +155,12 @@ void CrisislabCommon::handleCrisislabMessage(
 
 			if (meshSettings.has_broadcast_interval_seconds) {
 				LOG_INFO("Setting broadcast interval to %u seconds", meshSettings.broadcast_interval_seconds);
-				preferences.putUInt("bcast_interval", meshSettings.broadcast_interval_seconds);
+				preferences.putUInt("bcast_int_s", meshSettings.broadcast_interval_seconds);
 			}
 
 			if (meshSettings.has_ping_timeout_seconds) {
 				LOG_INFO("Setting ping timeout to %u seconds", meshSettings.ping_timeout_seconds);
-				preferences.putUInt("ping_timeout", meshSettings.ping_timeout_seconds);
+				preferences.putUInt("ping_timeout_s", meshSettings.ping_timeout_seconds);
 			}
 
 			preferences.end();
@@ -184,14 +184,14 @@ void CrisislabCommon::handleCrisislabMessage(
 				preferences.getString("channel_name", settings->channel_name, sizeof(settings->channel_name));
 			}
 
-			settings->has_broadcast_interval_seconds = preferences.isKey("bcast_interval");
+			settings->has_broadcast_interval_seconds = preferences.isKey("bcast_int_s");
 			if (settings->has_broadcast_interval_seconds) {
-				settings->broadcast_interval_seconds = preferences.getUInt("bcast_interval");
+				settings->broadcast_interval_seconds = preferences.getUInt("bcast_int_s");
 			}
 
-			settings->has_ping_timeout_seconds = preferences.isKey("ping_timeout");
+			settings->has_ping_timeout_seconds = preferences.isKey("ping_timeout_s");
 			if (settings->has_ping_timeout_seconds) {
-				settings->ping_timeout_seconds = preferences.getUInt("ping_timeout");
+				settings->ping_timeout_seconds = preferences.getUInt("ping_timeout_s");
 			}
 
 			preferences.end();
@@ -352,15 +352,15 @@ void CrisislabCommon::handleCrisislabMessage(
 
 			break;
 		}
-		case meshtastic_CrisislabMessage_start_live_data_tag: {
-			LOG_INFO("Handling \"start live data\" command");
+		case meshtastic_CrisislabMessage_start_live_telemetry_tag: {
+			LOG_INFO("Handling \"start live telemetry\" command");
 
 			if (this->liveDataTaskHandle != nullptr) {
-				LOG_WARN("Live data task already running, ignoring start live data command");
+				LOG_WARN("Live data task already running, ignoring start live telemetry command");
 			}
 
 			xTaskCreate(
-				CrisislabCommon::sendLiveData,
+				CrisislabCommon::sendLiveTelemetry,
 				"LIVE_DATA", // task name
 				8192, // stack size in words
 				this, // task parameter
@@ -370,35 +370,58 @@ void CrisislabCommon::handleCrisislabMessage(
 
 			break;
 		}
-		case meshtastic_CrisislabMessage_stop_live_data_tag: {
-			LOG_INFO("Handling \"stop live data\" command");
+		case meshtastic_CrisislabMessage_stop_live_telemetry_tag: {
+			LOG_INFO("Handling \"stop live telemetry\" command");
 
 			if (this->liveDataTaskHandle == nullptr) {
-				LOG_WARN("Live data task not running, ignoring stop live data command");
+				LOG_WARN("Live data task not running, ignoring stop live telemetry command");
 			} else {
-				LOG_DEBUG("Stopping live data task and setting handle to nullptr");
+				LOG_DEBUG("Stopping live telemetry task and setting handle to nullptr");
 				vTaskDelete(this->liveDataTaskHandle);
 				this->liveDataTaskHandle = nullptr;
 			}
 
 			break;
 		}
-		case meshtastic_CrisislabMessage_live_data_tag: {
+		case meshtastic_CrisislabMessage_live_telemetry_tag: {
 #if MESHTASTIC_CRISISLAB_GATEWAY
-			LOG_INFO("Handling \"live data\" from node %u", meshPacket->from);
+			LOG_INFO("Handling \"live telemetry\" from node %u", meshPacket->from);
 
 			if (meshPacket == nullptr) {
-				LOG_ERROR("Received live data without mesh packet");
+				LOG_ERROR("Received live telemetry without mesh packet");
 				break;
 			}
 
+			meshtastic_CrisislabMessage messageCopy = message;
+			messageCopy.message.live_telemetry.timestamp = CrisislabCommon::secondsSinceEpoch();
+
+			std::vector<uint8_t> encodedBytes(meshtastic_Constants_DATA_PAYLOAD_LEN);
+			size_t bytesWritten = pb_encode_to_bytes(
+				encodedBytes.data(),
+				encodedBytes.size(),
+				&meshtastic_CrisislabMessage_msg,
+				&messageCopy
+			);
+
 			GatewayModule::tryMqttPublish(
-				meshPacket->decoded.payload.bytes,
-				meshPacket->decoded.payload.size
+				encodedBytes.data(),
+				bytesWritten
 			);
 #else
-			LOG_ERROR("We've somehow ended up with a live data packet in handleCrisislabMessage as a normal node. This should never happen as normal nodes should forward live data immediately");
+			LOG_ERROR("We've somehow ended up with a live telemetry packet in handleCrisislabMessage as a normal node. This should never happen as normal nodes should forward live data immediately");
 #endif
+
+			break;
+		}
+		case meshtastic_CrisislabMessage_get_ad_hoc_telemetry_tag: {
+			LOG_INFO("Handling \"get ad hoc live telemetry\" command");
+
+			if (nodeDB->getNodeNum() != message.message.get_ad_hoc_telemetry) {
+				LOG_DEBUG("We are not the desired node for ad hoc telemetry");
+				break;
+			}
+
+			// TODO
 
 			break;
 		}
@@ -409,11 +432,6 @@ void CrisislabCommon::handleCrisislabMessage(
 }
 
 ProcessMessage CrisislabCommon::handleReceived(const meshtastic_MeshPacket &meshPacket) {
-	// LOG_DEBUG("Received mesh packet from %u on port %d",
-	// 	meshPacket.from,
-	// 	meshPacket.decoded.portnum
-	// );
-
 	// if it's a normal message handle accordingly depending on who we are
 	if (meshPacket.decoded.portnum == this->primaryPortNum) {
 #if MESHTASTIC_CRISISLAB_GATEWAY
@@ -425,16 +443,16 @@ ProcessMessage CrisislabCommon::handleReceived(const meshtastic_MeshPacket &mesh
 		return ProcessMessage::STOP;
 	}
 
-	// if we're a normal node, we're responsible for forwarding live data packets
+	// if we're a normal node, we're responsible for forwarding live telemetry packets
 	if (meshPacket.decoded.portnum == this->livePortNum) {
 #if MESHTASTIC_CRISISLAB_NORMAL
-		LOG_DEBUG("Node %u received live data packet", nodeDB->getNodeNum());
+		LOG_DEBUG("Node %u received live telemetry packet", nodeDB->getNodeNum());
 
 		Preferences preferences;
 		preferences.begin("crisislab", true);
 
 		if (!preferences.isKey("next_hops")) {
-			LOG_ERROR("No next hops found, cannot forward live data packet so it will be dropped");
+			LOG_ERROR("No next hops found, cannot forward live telemetry packet so it will be dropped");
 			preferences.end();
 			return ProcessMessage::STOP;
 		}
@@ -442,7 +460,7 @@ ProcessMessage CrisislabCommon::handleReceived(const meshtastic_MeshPacket &mesh
 		const size_t nextHopsBufferLength = preferences.getBytesLength("next_hops");
 
 		if (nextHopsBufferLength == 0) {
-			LOG_ERROR("Next hops buffer length is 0, cannot forward live data packet so it will be dropped");
+			LOG_ERROR("Next hops buffer length is 0, cannot forward live telemetry packet so it will be dropped");
 			preferences.end();
 				return ProcessMessage::STOP;
 		}
@@ -471,17 +489,17 @@ ProcessMessage CrisislabCommon::handleReceived(const meshtastic_MeshPacket &mesh
 	return ProcessMessage::CONTINUE;
 }
 
-void CrisislabCommon::sendLiveData(void *params) {
+void CrisislabCommon::sendLiveTelemetry(void *params) {
 	CrisislabCommon *self = (CrisislabCommon *)params;
 
 	Preferences preferences;
 	preferences.begin("crisislab", true);
 
-	uint32_t bestNextHop = 0;
+	NodeNum nextHops[16] = {0};
 
 #if MESHTASTIC_CRISISLAB_NORMAL
 	if (!preferences.isKey("next_hops")) {
-		LOG_ERROR("No next hops found, cannot send live data, quitting task");
+		LOG_ERROR("No next hops found, cannot send live telemetry, quitting task");
 		preferences.end();
 		vTaskDelete(NULL);
 	}
@@ -489,7 +507,7 @@ void CrisislabCommon::sendLiveData(void *params) {
 	const size_t nextHopsBufferLength = preferences.getBytesLength("next_hops");
 
 	if (nextHopsBufferLength == 0) {
-		LOG_ERROR("Next hops buffer length is 0, cannot send live data, quitting task");
+		LOG_ERROR("Next hops buffer length is 0, cannot send live telemetry, quitting task");
 		preferences.end();
 		vTaskDelete(NULL);
 	}
@@ -497,43 +515,49 @@ void CrisislabCommon::sendLiveData(void *params) {
 	// get first next hop
 	// TODO: support falling back to other next hops if the first one fails
 
-	preferences.getBytes("next_hops", &bestNextHop, sizeof(uint32_t));
+	preferences.getBytes("next_hops", &nextHops, nextHopsBufferLength);
 #endif
 
-	if (!preferences.isKey("bcast_interval")) {
-		LOG_ERROR("No broadcast interval found, cannot send live data, quitting task");
+	NodeNum bestNextHop = nextHops[0];
+
+	if (!preferences.isKey("bcast_int_s")) {
+		LOG_ERROR("No broadcast interval found, cannot send live telemetry, quitting task");
 		preferences.end();
 		vTaskDelete(NULL);
 	}
 
-	uint32_t broadcastIntervalSeconds = preferences.getUInt("bcast_interval" );
+	uint32_t broadcastIntervalSeconds = preferences.getUInt("bcast_int_s" );
+
+	preferences.end();
+
+	LOG_INFO("Using broadcast interval of %d", broadcastIntervalSeconds);
 
 	while (true) {
-		LOG_DEBUG("Sending live data packet");
+		LOG_DEBUG("Sending live telemetry packet");
 
 		meshtastic_CrisislabMessage message = meshtastic_CrisislabMessage_init_default;
-		message.which_message = meshtastic_CrisislabMessage_live_data_tag;
-		message.message.live_data.node_num = nodeDB->getNodeNum();
-		message.message.live_data.timestamp = self->secondsSinceEpoch();
+		message.which_message = meshtastic_CrisislabMessage_live_telemetry_tag;
+		message.message.live_telemetry.node_num = nodeDB->getNodeNum();
+		message.message.live_telemetry.timestamp = self->secondsSinceEpoch();
 
-		message.message.live_data.has_user = true;
+		message.message.live_telemetry.has_user = true;
 		memcpy(
-			&message.message.live_data.user,
+			&message.message.live_telemetry.user,
 			&owner,
 			sizeof(meshtastic_User)
 		);
 
-		message.message.live_data.has_position = true;
+		message.message.live_telemetry.has_position = true;
 		memcpy(
-			&message.message.live_data.position,
+			&message.message.live_telemetry.position,
 			&localPosition,
 			sizeof(meshtastic_Position)
 		);
 
-		message.message.live_data.has_device_metrics = true;
+		message.message.live_telemetry.has_device_metrics = true;
 		const meshtastic_Telemetry telemetry = deviceTelemetryModule->getDeviceTelemetry();
 		memcpy(
-			&message.message.live_data.device_metrics,
+			&message.message.live_telemetry.device_metrics,
 			&telemetry.variant.device_metrics,
 			sizeof(meshtastic_DeviceMetrics)
 		);
@@ -563,17 +587,17 @@ void CrisislabCommon::returnSignalData(void *params) {
 	Preferences preferences;
 	preferences.begin("crisislab", true);
 
-	if (!preferences.isKey("ping_timeout")) {
+	if (!preferences.isKey("ping_timeout_s")) {
 		LOG_ERROR("No ping collection timeout setting found, cannot return signal data, quitting task");
 		preferences.end();
 		vTaskDelete(NULL);
 	}
 
-	uint32_t pingCollectionTimeout = preferences.getUInt("ping_timeout", CrisislabCommon::pingCollectionTimeout);
+	uint32_t pingCollectionTimeoutSeconds = preferences.getUInt("ping_timeout_s", CrisislabCommon::pingCollectionTimeoutSeconds);
 
 	LOG_DEBUG("Starting timer to return signal data");
 
-	vTaskDelay(pingCollectionTimeout / portTICK_PERIOD_MS);
+	vTaskDelay(pingCollectionTimeoutSeconds * 1000 / portTICK_PERIOD_MS);
 
 	self->isCollectingPings = false;
 	LOG_DEBUG("No longer collecting pings");

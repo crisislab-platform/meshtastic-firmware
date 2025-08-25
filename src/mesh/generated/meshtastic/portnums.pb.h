@@ -137,7 +137,7 @@ typedef enum _meshtastic_PortNum {
     meshtastic_PortNum_ATAK_FORWARDER = 257,
     /* CRISiSLab: Default port num for modules in CRISiSLab's Meshtastic Portal project. */
     meshtastic_PortNum_CRISISLAB_APP_PRIMARY = 258,
-    /* CRISiSLab: Secondary port for CRISiSLab for sending live data */
+    /* CRISiSLab: Secondary port for CRISiSLab for sending telemetry */
     meshtastic_PortNum_CRISISLAB_APP_LIVE = 259,
     /* Currently we limit port nums to no higher than this value */
     meshtastic_PortNum_MAX = 511

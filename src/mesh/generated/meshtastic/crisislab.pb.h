@@ -58,7 +58,7 @@ typedef struct _meshtastic_CrisislabMessage_NextHopsMap_EntriesEntry {
     meshtastic_CrisislabMessage_NextHops value;
 } meshtastic_CrisislabMessage_NextHopsMap_EntriesEntry;
 
-typedef struct _meshtastic_CrisislabMessage_LiveData {
+typedef struct _meshtastic_CrisislabMessage_Telemetry {
     uint32_t node_num;
     uint64_t timestamp; /* seconds since unix epoch */
     bool has_user;
@@ -67,7 +67,7 @@ typedef struct _meshtastic_CrisislabMessage_LiveData {
     meshtastic_Position position;
     bool has_device_metrics;
     meshtastic_DeviceMetrics device_metrics;
-} meshtastic_CrisislabMessage_LiveData;
+} meshtastic_CrisislabMessage_Telemetry;
 
 typedef struct _meshtastic_CrisislabMessage {
     pb_size_t which_message;
@@ -79,9 +79,10 @@ typedef struct _meshtastic_CrisislabMessage {
         meshtastic_CrisislabMessage_Empty ping;
         meshtastic_CrisislabMessage_SignalData signal_data;
         meshtastic_CrisislabMessage_NextHopsMap updated_next_hops;
-        meshtastic_CrisislabMessage_Empty start_live_data;
-        meshtastic_CrisislabMessage_Empty stop_live_data;
-        meshtastic_CrisislabMessage_LiveData live_data;
+        meshtastic_CrisislabMessage_Empty start_live_telemetry;
+        meshtastic_CrisislabMessage_Empty stop_live_telemetry;
+        meshtastic_CrisislabMessage_Telemetry live_telemetry;
+        uint32_t get_ad_hoc_telemetry;
     } message;
 } meshtastic_CrisislabMessage;
 
@@ -100,7 +101,7 @@ extern "C" {
 #define meshtastic_CrisislabMessage_NextHops_init_default {0, {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}}
 #define meshtastic_CrisislabMessage_NextHopsMap_init_default {NULL}
 #define meshtastic_CrisislabMessage_NextHopsMap_EntriesEntry_init_default {0, false, meshtastic_CrisislabMessage_NextHops_init_default}
-#define meshtastic_CrisislabMessage_LiveData_init_default {0, 0, false, meshtastic_User_init_default, false, meshtastic_Position_init_default, false, meshtastic_DeviceMetrics_init_default}
+#define meshtastic_CrisislabMessage_Telemetry_init_default {0, 0, false, meshtastic_User_init_default, false, meshtastic_Position_init_default, false, meshtastic_DeviceMetrics_init_default}
 #define meshtastic_CrisislabMessage_init_zero    {0, {meshtastic_CrisislabMessage_MeshSettings_init_zero}}
 #define meshtastic_CrisislabMessage_SignalData_init_zero {0, 0, 0, {meshtastic_CrisislabMessage_SignalData_Entry_init_zero, meshtastic_CrisislabMessage_SignalData_Entry_init_zero, meshtastic_CrisislabMessage_SignalData_Entry_init_zero, meshtastic_CrisislabMessage_SignalData_Entry_init_zero, meshtastic_CrisislabMessage_SignalData_Entry_init_zero, meshtastic_CrisislabMessage_SignalData_Entry_init_zero, meshtastic_CrisislabMessage_SignalData_Entry_init_zero, meshtastic_CrisislabMessage_SignalData_Entry_init_zero, meshtastic_CrisislabMessage_SignalData_Entry_init_zero, meshtastic_CrisislabMessage_SignalData_Entry_init_zero}}
 #define meshtastic_CrisislabMessage_SignalData_Entry_init_zero {0, 0, 0}
@@ -110,7 +111,7 @@ extern "C" {
 #define meshtastic_CrisislabMessage_NextHops_init_zero {0, {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}}
 #define meshtastic_CrisislabMessage_NextHopsMap_init_zero {NULL}
 #define meshtastic_CrisislabMessage_NextHopsMap_EntriesEntry_init_zero {0, false, meshtastic_CrisislabMessage_NextHops_init_zero}
-#define meshtastic_CrisislabMessage_LiveData_init_zero {0, 0, false, meshtastic_User_init_zero, false, meshtastic_Position_init_zero, false, meshtastic_DeviceMetrics_init_zero}
+#define meshtastic_CrisislabMessage_Telemetry_init_zero {0, 0, false, meshtastic_User_init_zero, false, meshtastic_Position_init_zero, false, meshtastic_DeviceMetrics_init_zero}
 
 /* Field tags (for use in manual encoding/decoding) */
 #define meshtastic_CrisislabMessage_SignalData_Entry_from_tag 1
@@ -127,11 +128,11 @@ extern "C" {
 #define meshtastic_CrisislabMessage_NextHopsMap_entries_tag 1
 #define meshtastic_CrisislabMessage_NextHopsMap_EntriesEntry_key_tag 1
 #define meshtastic_CrisislabMessage_NextHopsMap_EntriesEntry_value_tag 2
-#define meshtastic_CrisislabMessage_LiveData_node_num_tag 1
-#define meshtastic_CrisislabMessage_LiveData_timestamp_tag 2
-#define meshtastic_CrisislabMessage_LiveData_user_tag 3
-#define meshtastic_CrisislabMessage_LiveData_position_tag 4
-#define meshtastic_CrisislabMessage_LiveData_device_metrics_tag 5
+#define meshtastic_CrisislabMessage_Telemetry_node_num_tag 1
+#define meshtastic_CrisislabMessage_Telemetry_timestamp_tag 2
+#define meshtastic_CrisislabMessage_Telemetry_user_tag 3
+#define meshtastic_CrisislabMessage_Telemetry_position_tag 4
+#define meshtastic_CrisislabMessage_Telemetry_device_metrics_tag 5
 #define meshtastic_CrisislabMessage_mesh_settings_tag 1
 #define meshtastic_CrisislabMessage_get_mesh_settings_request_tag 2
 #define meshtastic_CrisislabMessage_server_settings_tag 3
@@ -139,9 +140,10 @@ extern "C" {
 #define meshtastic_CrisislabMessage_ping_tag     5
 #define meshtastic_CrisislabMessage_signal_data_tag 6
 #define meshtastic_CrisislabMessage_updated_next_hops_tag 7
-#define meshtastic_CrisislabMessage_start_live_data_tag 8
-#define meshtastic_CrisislabMessage_stop_live_data_tag 9
-#define meshtastic_CrisislabMessage_live_data_tag 10
+#define meshtastic_CrisislabMessage_start_live_telemetry_tag 8
+#define meshtastic_CrisislabMessage_stop_live_telemetry_tag 9
+#define meshtastic_CrisislabMessage_live_telemetry_tag 10
+#define meshtastic_CrisislabMessage_get_ad_hoc_telemetry_tag 11
 
 /* Struct field encoding specification for nanopb */
 #define meshtastic_CrisislabMessage_FIELDLIST(X, a) \
@@ -152,9 +154,10 @@ X(a, STATIC,   ONEOF,    MESSAGE,  (message,update_next_hops_request,message.upd
 X(a, STATIC,   ONEOF,    MESSAGE,  (message,ping,message.ping),   5) \
 X(a, STATIC,   ONEOF,    MESSAGE,  (message,signal_data,message.signal_data),   6) \
 X(a, STATIC,   ONEOF,    MESSAGE,  (message,updated_next_hops,message.updated_next_hops),   7) \
-X(a, STATIC,   ONEOF,    MESSAGE,  (message,start_live_data,message.start_live_data),   8) \
-X(a, STATIC,   ONEOF,    MESSAGE,  (message,stop_live_data,message.stop_live_data),   9) \
-X(a, STATIC,   ONEOF,    MESSAGE,  (message,live_data,message.live_data),  10)
+X(a, STATIC,   ONEOF,    MESSAGE,  (message,start_live_telemetry,message.start_live_telemetry),   8) \
+X(a, STATIC,   ONEOF,    MESSAGE,  (message,stop_live_telemetry,message.stop_live_telemetry),   9) \
+X(a, STATIC,   ONEOF,    MESSAGE,  (message,live_telemetry,message.live_telemetry),  10) \
+X(a, STATIC,   ONEOF,    UINT32,   (message,get_ad_hoc_telemetry,message.get_ad_hoc_telemetry),  11)
 #define meshtastic_CrisislabMessage_CALLBACK NULL
 #define meshtastic_CrisislabMessage_DEFAULT NULL
 #define meshtastic_CrisislabMessage_message_mesh_settings_MSGTYPE meshtastic_CrisislabMessage_MeshSettings
@@ -164,9 +167,9 @@ X(a, STATIC,   ONEOF,    MESSAGE,  (message,live_data,message.live_data),  10)
 #define meshtastic_CrisislabMessage_message_ping_MSGTYPE meshtastic_CrisislabMessage_Empty
 #define meshtastic_CrisislabMessage_message_signal_data_MSGTYPE meshtastic_CrisislabMessage_SignalData
 #define meshtastic_CrisislabMessage_message_updated_next_hops_MSGTYPE meshtastic_CrisislabMessage_NextHopsMap
-#define meshtastic_CrisislabMessage_message_start_live_data_MSGTYPE meshtastic_CrisislabMessage_Empty
-#define meshtastic_CrisislabMessage_message_stop_live_data_MSGTYPE meshtastic_CrisislabMessage_Empty
-#define meshtastic_CrisislabMessage_message_live_data_MSGTYPE meshtastic_CrisislabMessage_LiveData
+#define meshtastic_CrisislabMessage_message_start_live_telemetry_MSGTYPE meshtastic_CrisislabMessage_Empty
+#define meshtastic_CrisislabMessage_message_stop_live_telemetry_MSGTYPE meshtastic_CrisislabMessage_Empty
+#define meshtastic_CrisislabMessage_message_live_telemetry_MSGTYPE meshtastic_CrisislabMessage_Telemetry
 
 #define meshtastic_CrisislabMessage_SignalData_FIELDLIST(X, a) \
 X(a, STATIC,   SINGULAR, UINT32,   to,                1) \
@@ -219,17 +222,17 @@ X(a, STATIC,   OPTIONAL, MESSAGE,  value,             2)
 #define meshtastic_CrisislabMessage_NextHopsMap_EntriesEntry_DEFAULT NULL
 #define meshtastic_CrisislabMessage_NextHopsMap_EntriesEntry_value_MSGTYPE meshtastic_CrisislabMessage_NextHops
 
-#define meshtastic_CrisislabMessage_LiveData_FIELDLIST(X, a) \
+#define meshtastic_CrisislabMessage_Telemetry_FIELDLIST(X, a) \
 X(a, STATIC,   SINGULAR, UINT32,   node_num,          1) \
 X(a, STATIC,   SINGULAR, UINT64,   timestamp,         2) \
 X(a, STATIC,   OPTIONAL, MESSAGE,  user,              3) \
 X(a, STATIC,   OPTIONAL, MESSAGE,  position,          4) \
 X(a, STATIC,   OPTIONAL, MESSAGE,  device_metrics,    5)
-#define meshtastic_CrisislabMessage_LiveData_CALLBACK NULL
-#define meshtastic_CrisislabMessage_LiveData_DEFAULT NULL
-#define meshtastic_CrisislabMessage_LiveData_user_MSGTYPE meshtastic_User
-#define meshtastic_CrisislabMessage_LiveData_position_MSGTYPE meshtastic_Position
-#define meshtastic_CrisislabMessage_LiveData_device_metrics_MSGTYPE meshtastic_DeviceMetrics
+#define meshtastic_CrisislabMessage_Telemetry_CALLBACK NULL
+#define meshtastic_CrisislabMessage_Telemetry_DEFAULT NULL
+#define meshtastic_CrisislabMessage_Telemetry_user_MSGTYPE meshtastic_User
+#define meshtastic_CrisislabMessage_Telemetry_position_MSGTYPE meshtastic_Position
+#define meshtastic_CrisislabMessage_Telemetry_device_metrics_MSGTYPE meshtastic_DeviceMetrics
 
 extern const pb_msgdesc_t meshtastic_CrisislabMessage_msg;
 extern const pb_msgdesc_t meshtastic_CrisislabMessage_SignalData_msg;
@@ -240,7 +243,7 @@ extern const pb_msgdesc_t meshtastic_CrisislabMessage_Empty_msg;
 extern const pb_msgdesc_t meshtastic_CrisislabMessage_NextHops_msg;
 extern const pb_msgdesc_t meshtastic_CrisislabMessage_NextHopsMap_msg;
 extern const pb_msgdesc_t meshtastic_CrisislabMessage_NextHopsMap_EntriesEntry_msg;
-extern const pb_msgdesc_t meshtastic_CrisislabMessage_LiveData_msg;
+extern const pb_msgdesc_t meshtastic_CrisislabMessage_Telemetry_msg;
 
 /* Defines for backwards compatibility with code written before nanopb-0.4.0 */
 #define meshtastic_CrisislabMessage_fields &meshtastic_CrisislabMessage_msg
@@ -252,20 +255,20 @@ extern const pb_msgdesc_t meshtastic_CrisislabMessage_LiveData_msg;
 #define meshtastic_CrisislabMessage_NextHops_fields &meshtastic_CrisislabMessage_NextHops_msg
 #define meshtastic_CrisislabMessage_NextHopsMap_fields &meshtastic_CrisislabMessage_NextHopsMap_msg
 #define meshtastic_CrisislabMessage_NextHopsMap_EntriesEntry_fields &meshtastic_CrisislabMessage_NextHopsMap_EntriesEntry_msg
-#define meshtastic_CrisislabMessage_LiveData_fields &meshtastic_CrisislabMessage_LiveData_msg
+#define meshtastic_CrisislabMessage_Telemetry_fields &meshtastic_CrisislabMessage_Telemetry_msg
 
 /* Maximum encoded size of messages (where known) */
 /* meshtastic_CrisislabMessage_size depends on runtime parameters */
 /* meshtastic_CrisislabMessage_NextHopsMap_size depends on runtime parameters */
-#define MESHTASTIC_MESHTASTIC_CRISISLAB_PB_H_MAX_SIZE meshtastic_CrisislabMessage_LiveData_size
+#define MESHTASTIC_MESHTASTIC_CRISISLAB_PB_H_MAX_SIZE meshtastic_CrisislabMessage_Telemetry_size
 #define meshtastic_CrisislabMessage_Empty_size   0
-#define meshtastic_CrisislabMessage_LiveData_size 308
 #define meshtastic_CrisislabMessage_MeshSettings_size 25
 #define meshtastic_CrisislabMessage_NextHopsMap_EntriesEntry_size 104
 #define meshtastic_CrisislabMessage_NextHops_size 96
 #define meshtastic_CrisislabMessage_ServerSettings_size 6
 #define meshtastic_CrisislabMessage_SignalData_Entry_size 22
 #define meshtastic_CrisislabMessage_SignalData_size 248
+#define meshtastic_CrisislabMessage_Telemetry_size 308
 
 #ifdef __cplusplus
 } /* extern "C" */
