@@ -1,18 +1,47 @@
-# Meshtastic Firmware
+# Meshtastic Firmware - CRISiSLab Fork
 
-![GitHub release downloads](https://img.shields.io/github/downloads/meshtastic/firmware/total)
-[![CI](https://img.shields.io/github/actions/workflow/status/meshtastic/firmware/main_matrix.yml?branch=master&label=actions&logo=github&color=yellow)](https://github.com/meshtastic/firmware/actions/workflows/ci.yml)
-[![CLA assistant](https://cla-assistant.io/readme/badge/meshtastic/firmware)](https://cla-assistant.io/meshtastic/firmware)
-[![Fiscal Contributors](https://opencollective.com/meshtastic/tiers/badge.svg?label=Fiscal%20Contributors&color=deeppink)](https://opencollective.com/meshtastic/)
-[![Vercel](https://img.shields.io/static/v1?label=Powered%20by&message=Vercel&style=flat&logo=vercel&color=000000)](https://vercel.com?utm_source=meshtastic&utm_campaign=oss)
+This is CRISiSLab's fork of the Meshtastic firmware for our Meshtastic monitoring system.
 
-## Overview
+## How to Set Up a Node
 
-This repository contains the device firmware for the Meshtastic project.
+### Flashing the Firmware
 
-- **[Building Instructions](https://meshtastic.org/docs/development/firmware/build)**
-- **[Flashing Instructions](https://meshtastic.org/docs/getting-started/flashing-firmware/)**
+1. Clone this repo:
 
-## Stats
+    ```
+    git clone https://github.com/crisislab-platform/meshtastic-firmware.git
+    cd meshtastic-firmware
+    ```
 
-![Alt](https://repobeats.axiom.co/api/embed/a92f097d9197ae853e780ec53d7d126e545629ab.svg "Repobeats analytics image")
+2. Install PlatformIO if you haven't already. [See installation instructions here](https://platformio.org/install/cli).
+
+3. Connect the LoRa device to your computer via USB.
+
+4. Build and upload the firmware. Depending on the type of this node (gateway or normal) you will need a different flag before the command:
+
+    For normal nodes (no WiFi):
+
+    ```bash
+    PLATFORMIO_BUILD_FLAGS="-DMESHTASTIC_CRISISLAB_NORMAL=1" pio run -t upload
+    ```
+
+    For gateway nodes (with WiFi):
+
+    ```bash
+    PLATFORMIO_BUILD_FLAGS="-DMESHTASTIC_CRISISLAB_GATEWAY=1" pio run -t upload
+    ```
+
+### Configuration
+
+All nodes need to be set on the ANZ region, on the Short Fast modem preset, and have a common channel.
+
+Gateway nodes also require other settings to be configured:
+
+- Network: enable it and set the SSID and password of your WiFi network.
+- MQTT:
+    - Enable it
+    - Set the address of the server the broker is running on (also specify port if necessary, default is 1883)
+    - Set the username and password
+    - Disable encryption (for now)
+
+We have links which will open the Meshtastic app and set the appropriate settings for you, so use them or contact us.
