@@ -5,6 +5,7 @@
 #include "concurrency/OSThread.h"
 #include <vector>
 #include <map>
+#include <atomic>
 
 class CrisislabCommon : public MeshModule
 {
@@ -29,7 +30,7 @@ class CrisislabCommon : public MeshModule
 
 	ChannelIndex channelIndex = 0;
 	bool ignoreUpdateNextHopsRequestPackets = false;
-	bool isCollectingPings = false;
+	std::atomic<bool> isCollectingPings{false};
 	std::vector<meshtastic_CrisislabMessage_SignalData_Entry> signalDataEntries;
 	TaskHandle_t liveDataTaskHandle = nullptr;
 

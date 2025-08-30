@@ -15,6 +15,10 @@
 #include "../../mesh/generated/meshtastic/crisislab.pb.h"
 #include "../Telemetry/DeviceTelemetry.h"
 
+static StaticTask_t g_pingTCB;
+static StackType_t  g_pingStack[4096];
+static TaskHandle_t g_pingTask = nullptr;
+
 std::unique_ptr<std::map<uint32_t, meshtastic_CrisislabMessage_NextHops>> CrisislabCommon::nextHopsMapPtr(
     new std::map<uint32_t, meshtastic_CrisislabMessage_NextHops>()
 );
@@ -258,17 +262,22 @@ void CrisislabCommon::handleCrisislabMessage(
 				break;
 			}
 
-			if (!this->isCollectingPings) {
-				this->isCollectingPings = true;
+			if (!this->isCollectingPings.load()) {
+				this->isCollectingPings.store(true);
 				this->signalDataEntries.clear();
-				xTaskCreate(
+
+				g_pingTask = xTaskCreateStatic(
 					CrisislabCommon::returnSignalData,
 					"PING_COLLECTION_TIMEOUT",
 					4096, // stack size in words
 					this, // task parameter
 					5, // priority from 0-9
-					NULL // task handle
+					g_pingStack,
+					&g_pingTCB
 				);
+
+				Serial.printf("xTaskCreate result: %d (should be 1 for pdPASS)\n", g_pingTask!=nullptr);
+				LOG_INFO("Created task to send singal data to server #$#$#$#$#$");
 			}
 
 			this->signalDataEntries.push_back({
@@ -359,6 +368,10 @@ void CrisislabCommon::handleCrisislabMessage(
 				LOG_WARN("Live data task already running, ignoring start live telemetry command");
 			}
 
+			LOG_INFO("Remainig heap	is: %u \n", xPortGetFreeHeapSize());
+			LOG_INFO("Remaining stack is %u\n", uxTaskGetStackHighWaterMark(NULL));
+			LOG_INFO("in ISR? %d", xPortInIsrContext());
+			LOG_INFO("Largest internal block: %u",	(unsigned)heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL));
 			xTaskCreate(
 				CrisislabCommon::sendLiveTelemetry,
 				"LIVE_DATA", // task name
@@ -366,7 +379,7 @@ void CrisislabCommon::handleCrisislabMessage(
 				this, // task parameter
 				5, // priority from 0-9
 				&this->liveDataTaskHandle
-			);
+			  );
 
 			break;
 		}
@@ -582,6 +595,7 @@ void CrisislabCommon::sendLiveTelemetry(void *params) {
 }
 
 void CrisislabCommon::returnSignalData(void *params) {
+	LOG_INFO("Clanker Entered the returnSignalData function. Thats a good sign by the way.");
 	CrisislabCommon *self = (CrisislabCommon *)params;
 
 	Preferences preferences;
@@ -599,7 +613,7 @@ void CrisislabCommon::returnSignalData(void *params) {
 
 	vTaskDelay(pingCollectionTimeoutSeconds * 1000 / portTICK_PERIOD_MS);
 
-	self->isCollectingPings = false;
+	self->isCollectingPings.store(false);
 	LOG_DEBUG("No longer collecting pings");
 
 	meshtastic_CrisislabMessage message = meshtastic_CrisislabMessage_init_default;
@@ -636,6 +650,6 @@ void CrisislabCommon::returnSignalData(void *params) {
 #endif
 
 	LOG_DEBUG("Sent signal data to mesh (for gateway to publish to MQTT)");
-
+	LOG_INFO("Clanker got all the way through returnSignalData. WOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOW. But its not much of a surprise the issue wasn't here in the first place :):)");
 	vTaskDelete(NULL);
 }
