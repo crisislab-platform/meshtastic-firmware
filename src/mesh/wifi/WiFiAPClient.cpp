@@ -274,6 +274,7 @@ bool initWifi()
             LOG_DEBUG("JOINING WIFI soon: ssid=%s", wifiName);
             wifiReconnect = new Periodic("WifiConnect", reconnectWiFi);
         }
+        wifiConnected = true;
         return true;
     } else {
         LOG_INFO("Not using WIFI");

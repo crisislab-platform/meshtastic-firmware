@@ -542,6 +542,15 @@ bool MQTT::wantsLink() const
 
 int32_t MQTT::runOnce()
 {
+    static uint32_t wifiReadySince = 0;
+    if (wifiConnected) {
+        wifiReadySince = 0;
+        LOG_INFO("WIFI CONNECTION STARTED!!!!!!!!!!!!!!!")
+
+    }
+    else{
+        LOG_INFO("WIFI NOT STARTED!!!!!!!!!!!!!!!!")
+    }
 #if HAS_NETWORKING
 #if !MESHTASTIC_CRISISLAB_GATEWAY
     if (!moduleConfig.mqtt.enabled || !(moduleConfig.mqtt.map_reporting_enabled || channels.anyMqttEnabled())) {
