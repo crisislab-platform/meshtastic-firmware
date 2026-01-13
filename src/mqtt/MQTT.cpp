@@ -543,7 +543,7 @@ bool MQTT::wantsLink() const
 int32_t MQTT::runOnce()
 {
     static uint32_t wifiReadySince = 0;
-    if (wifiConnected) {
+    if (WIFI.isConnected) {
         wifiReadySince = 0;
         LOG_INFO("WIFI CONNECTION STARTED!!!!!!!!!!!!!!!");
 
