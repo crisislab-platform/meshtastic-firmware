@@ -11,7 +11,6 @@
 
 extern bool needReconnect;
 extern concurrency::Periodic *wifiReconnect;
-extern bool wifiConnected;
 
 /// @return true if wifi is now in use
 bool initWifi();

@@ -55,6 +55,11 @@ Syslog syslog(syslogClient);
 
 Periodic *wifiReconnect;
 
+// test variables to solve gateway buggs 
+bool wifiConnected = false;
+uint32_t wifiGotIpAt = 0;
+
+
 static void onNetworkConnected()
 {
     if (!APStartupComplete) {
@@ -312,6 +317,10 @@ static void WiFiEvent(WiFiEvent_t event)
             syslog.disable();
             needReconnect = true;
             wifiReconnect->setIntervalFromNow(1000);
+
+            // record time and dissconection of network
+            wifiConnected = false;
+            wifiGotIpAt = 0;
         }
         break;
     case ARDUINO_EVENT_WIFI_STA_AUTHMODE_CHANGE:
@@ -320,6 +329,10 @@ static void WiFiEvent(WiFiEvent_t event)
     case ARDUINO_EVENT_WIFI_STA_GOT_IP:
         LOG_INFO("Obtained IP address: %s", WiFi.localIP().toString().c_str());
         onNetworkConnected();
+
+        // record time and connection of network
+        wifiConnected = true;
+        wifiGotIpAt = millis();
         break;
     case ARDUINO_EVENT_WIFI_STA_GOT_IP6:
 #if ESP_ARDUINO_VERSION >= ESP_ARDUINO_VERSION_VAL(3, 0, 0)

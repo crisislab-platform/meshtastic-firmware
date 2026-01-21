@@ -540,16 +540,23 @@ bool MQTT::wantsLink() const
 #endif
 }
 
+extern bool wifiConnected;
+extern uint32_t wifiGotIpAt;
+
 int32_t MQTT::runOnce()
 {
-    static uint32_t wifiReadySince = 0;
-    if (WIFI.isConnected) {
-        wifiReadySince = 0;
-        LOG_INFO("WIFI CONNECTION STARTED!!!!!!!!!!!!!!!");
+    // check if wifi has finnished connecting
+    if (!wifiConnected) {
+        LOG_INFO("WIFI IS NOT CONNECTIONED!!!!!!!!!!!!!!!");
+        return 5000;
+    }
+    if(millis() - wifiGotIpAt < 10000){
+        LOG_INFO("MQTT started after 10 sec");
+        return 5000;
 
     }
-    else{
-        LOG_INFO("WIFI NOT STARTED!!!!!!!!!!!!!!!!");
+    if(wifiConnected){
+        LOG_INFO("WIFI  CONNECTED!!!!!!!!!!!!!!!!");
     }
 #if HAS_NETWORKING
 #if !MESHTASTIC_CRISISLAB_GATEWAY
