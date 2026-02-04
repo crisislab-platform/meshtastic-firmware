@@ -545,18 +545,15 @@ extern uint32_t wifiGotIpAt;
 
 int32_t MQTT::runOnce()
 {
-    // check if wifi has finnished connecting
+    // wait for wifi to connect
     if (!wifiConnected) {
-        LOG_INFO("WIFI IS NOT CONNECTIONED!!!!!!!!!!!!!!!");
+        LOG_INFO("wifi is not connected");
         return 5000;
     }
     if(millis() - wifiGotIpAt < 10000){
         LOG_INFO("MQTT started after 10 sec");
         return 5000;
 
-    }
-    if(wifiConnected){
-        LOG_INFO("WIFI  CONNECTED!!!!!!!!!!!!!!!!");
     }
 #if HAS_NETWORKING
 #if !MESHTASTIC_CRISISLAB_GATEWAY
