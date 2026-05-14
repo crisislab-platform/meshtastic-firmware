@@ -593,6 +593,11 @@ int32_t MQTT::runOnce()
             pubSub.disconnect();
         }
 
+        // Drain one queued message per tick. All non-MQTT-thread callers must
+        // enqueue rather than calling pubSub.publish directly, so that
+        // PubSubClient is only ever touched from this thread.
+        publishQueuedMessages();
+
         powerFSM.trigger(EVENT_CONTACT_FROM_PHONE); // Suppress entering light sleep (because that would turn off bluetooth)
         return 20;
     }
@@ -728,7 +733,7 @@ void MQTT::enqueueMessage(const std::string topic, const uint8_t *payload, size_
 	}
 
 	entry->topic = std::move(topic);
-	entry->envBytes.assign(bytes, length);
+	entry->envBytes.assign(payload, length);
 
 	assert(mqttQueue.enqueue(entry, 0));
 }

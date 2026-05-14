@@ -585,9 +585,14 @@ void CrisislabCommon::sendLiveTelemetry(void *params) {
 		);
 
 #if MESHTASTIC_CRISISLAB_NORMAL
-		service->sendToMesh(meshPacket);
+		service->sendToMesh(meshPacket); // ownership transferred to router
 #else
+		// On the gateway we handle it locally instead of broadcasting. We
+		// allocated it from packetPool, so we must release it ourselves;
+		// otherwise we leak one packet per broadcast interval and the heap
+		// slowly fills up (which eventually starves the MQTT client).
 		self->handleCrisislabMessage(message, meshPacket);
+		packetPool.release(meshPacket);
 #endif
 
 		vTaskDelay(broadcastIntervalSeconds * 1000 / portTICK_PERIOD_MS);
@@ -644,9 +649,12 @@ void CrisislabCommon::returnSignalData(void *params) {
 	);
 
 #if MESHTASTIC_CRISISLAB_GATEWAY
+	// Handle locally, then release back to the pool — we own the allocation
+	// and sendToMesh is not being called to take it off our hands.
 	self->handleCrisislabMessage(message, meshPacket);
+	packetPool.release(meshPacket);
 #else
-	service->sendToMesh(meshPacket);
+	service->sendToMesh(meshPacket); // ownership transferred to router
 #endif
 
 	LOG_DEBUG("Sent signal data to mesh (for gateway to publish to MQTT)");
