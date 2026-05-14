@@ -53,14 +53,19 @@ void GatewayModule::mqttCallback(char *topic, byte *payload, unsigned int payloa
 		LOG_DEBUG("Using channel index %d for crisislab message", this->channelIndex);
 	}
 
+	// Handle the message locally first. Pass nullptr for meshPacket because
+	// MQTT inbound messages have no meaningful radio metadata (rssi/snr/from)
+	// and to avoid use-after-free if we hand the packet to sendToMesh below.
+	this->handleCrisislabMessage(message, nullptr);
+
 	// broadcast message to the rest of the mesh to handle too
 	if (message.which_message != meshtastic_CrisislabMessage_get_mesh_settings_request_tag) {
-		service->sendToMesh(meshPacket);
+		service->sendToMesh(meshPacket); // ownership transferred; do not touch meshPacket after this
 		LOG_DEBUG("GatewayModule sent packet to mesh");
+	} else {
+		// We allocated but didn't hand off; release back to the pool.
+		packetPool.release(meshPacket);
 	}
-
-	// handle the message locally as well
-	this->handleCrisislabMessage(message, meshPacket);
 }
 
 void GatewayModule::mqttCallbackStaticWrapper(char *topic, byte *payload, unsigned int length)
@@ -82,15 +87,10 @@ int32_t GatewayModule::runOnce()
 	}
 }
 
-// publish to broker if we're connected, otherwise put in queue for when we do connect later
+// Always enqueue. PubSubClient is not thread-safe; only the MQTT OSThread may
+// call pubSub.publish/loop. The MQTT thread drains this queue every tick.
 void GatewayModule::tryMqttPublish(const uint8_t *payload, size_t length) {
-	if (moduleConfig.mqtt.proxy_to_client_enabled || mqtt->isConnectedDirectly()) {
-		LOG_DEBUG("MQTT is connected, message sent to broker from CRISiSLab gateway");
-		mqtt->publish(GatewayModule::MQTT_OUTGOING_TOPIC, payload, length, false);
-	} else {
-		LOG_INFO("MQTT not connected, queueing signal data packet");
-		mqtt->enqueueMessage(std::string(GatewayModule::MQTT_OUTGOING_TOPIC), payload, length);
-	}
+	mqtt->enqueueMessage(std::string(GatewayModule::MQTT_OUTGOING_TOPIC), payload, length);
 }
 
 void GatewayModule::handleNormalMeshPacket(const meshtastic_MeshPacket &packet)

@@ -540,8 +540,21 @@ bool MQTT::wantsLink() const
 #endif
 }
 
+extern bool wifiConnected;
+extern uint32_t wifiGotIpAt;
+
 int32_t MQTT::runOnce()
 {
+    // wait for wifi to connect
+    if (!wifiConnected) {
+        LOG_INFO("wifi is not connected");
+        return 5000;
+    }
+    if(millis() - wifiGotIpAt < 10000){
+        LOG_INFO("MQTT started after 10 sec");
+        return 5000;
+
+    }
 #if HAS_NETWORKING
 #if !MESHTASTIC_CRISISLAB_GATEWAY
     if (!moduleConfig.mqtt.enabled || !(moduleConfig.mqtt.map_reporting_enabled || channels.anyMqttEnabled())) {
@@ -579,6 +592,11 @@ int32_t MQTT::runOnce()
             LOG_INFO("MQTT link not needed, drop");
             pubSub.disconnect();
         }
+
+        // Drain one queued message per tick. All non-MQTT-thread callers must
+        // enqueue rather than calling pubSub.publish directly, so that
+        // PubSubClient is only ever touched from this thread.
+        publishQueuedMessages();
 
         powerFSM.trigger(EVENT_CONTACT_FROM_PHONE); // Suppress entering light sleep (because that would turn off bluetooth)
         return 20;
@@ -715,7 +733,7 @@ void MQTT::enqueueMessage(const std::string topic, const uint8_t *payload, size_
 	}
 
 	entry->topic = std::move(topic);
-	entry->envBytes.assign(bytes, length);
+	entry->envBytes.assign(payload, length);
 
 	assert(mqttQueue.enqueue(entry, 0));
 }
