@@ -14,6 +14,7 @@
 #include "mqtt/MQTT.h"
 #include "../../mesh/generated/meshtastic/crisislab.pb.h"
 #include "../Telemetry/DeviceTelemetry.h"
+#include "main.h"
 
 static StaticTask_t g_pingTCB;
 static StackType_t  g_pingStack[4096];
@@ -139,6 +140,13 @@ meshtastic_MeshPacket *CrisislabCommon::allocMeshPacket(NodeNum to, meshtastic_P
 	return meshPacket;
 }
 
+void CrisislabCommon::scheduleReboot(int32_t seconds)
+{
+	LOG_INFO("Crisislab: rebooting in %d seconds to apply change", seconds);
+	screen->startAlert("Rebooting...");
+	rebootAtMsec = millis() + seconds * 1000;
+}
+
 void CrisislabCommon::handleCrisislabMessage(
 	meshtastic_CrisislabMessage &message,
 	const meshtastic_MeshPacket *meshPacket
@@ -168,6 +176,8 @@ void CrisislabCommon::handleCrisislabMessage(
 			}
 
 			preferences.end();
+
+			this->scheduleReboot(DEFAULT_REBOOT_SECONDS);
 
 			break;
 		}
@@ -393,6 +403,8 @@ void CrisislabCommon::handleCrisislabMessage(
 				vTaskDelete(this->liveDataTaskHandle);
 				this->liveDataTaskHandle = nullptr;
 			}
+
+			this->scheduleReboot(DEFAULT_REBOOT_SECONDS);
 
 			break;
 		}
