@@ -494,18 +494,13 @@ ProcessMessage CrisislabCommon::handleReceived(const meshtastic_MeshPacket &mesh
 		preferences.getBytes("next_hops", &bestNextHop, sizeof(uint32_t));
 		preferences.end();
 
-		meshtastic_MeshPacket toForward;
-		mempcpy(
-			&toForward,
-			&meshPacket,
-			sizeof(meshtastic_MeshPacket)
-		);
+		meshtastic_MeshPacket *toForward = router->allocForSending();
+		toForward->to = bestNextHop;
+		toForward->from = nodeDB->getNodeNum();
+		toForward->channel = this->channelIndex;
+		toForward->decoded = meshPacket.decoded;
 
-		toForward.to = bestNextHop;
-		toForward.from = nodeDB->getNodeNum();
-		toForward.channel = this->channelIndex;
-
-		service->sendToMesh(&toForward);
+		service->sendToMesh(toForward);
 #else
 		gatewayModule->handleNormalMeshPacket(meshPacket);
 #endif
