@@ -81,7 +81,7 @@ typedef struct _meshtastic_CrisislabMessage {
         meshtastic_CrisislabMessage_NextHopsMap updated_next_hops;
         meshtastic_CrisislabMessage_Empty start_live_telemetry;
         meshtastic_CrisislabMessage_Empty stop_live_telemetry;
-        meshtastic_CrisislabMessage_Telemetry live_telemetry;
+        meshtastic_CrisislabMessage_Telemetry telemetry;
         uint32_t get_ad_hoc_telemetry;
     } message;
 } meshtastic_CrisislabMessage;
@@ -142,7 +142,7 @@ extern "C" {
 #define meshtastic_CrisislabMessage_updated_next_hops_tag 7
 #define meshtastic_CrisislabMessage_start_live_telemetry_tag 8
 #define meshtastic_CrisislabMessage_stop_live_telemetry_tag 9
-#define meshtastic_CrisislabMessage_live_telemetry_tag 10
+#define meshtastic_CrisislabMessage_telemetry_tag 10
 #define meshtastic_CrisislabMessage_get_ad_hoc_telemetry_tag 11
 
 /* Struct field encoding specification for nanopb */
@@ -156,7 +156,7 @@ X(a, STATIC,   ONEOF,    MESSAGE,  (message,signal_data,message.signal_data),   
 X(a, STATIC,   ONEOF,    MESSAGE,  (message,updated_next_hops,message.updated_next_hops),   7) \
 X(a, STATIC,   ONEOF,    MESSAGE,  (message,start_live_telemetry,message.start_live_telemetry),   8) \
 X(a, STATIC,   ONEOF,    MESSAGE,  (message,stop_live_telemetry,message.stop_live_telemetry),   9) \
-X(a, STATIC,   ONEOF,    MESSAGE,  (message,live_telemetry,message.live_telemetry),  10) \
+X(a, STATIC,   ONEOF,    MESSAGE,  (message,telemetry,message.telemetry),  10) \
 X(a, STATIC,   ONEOF,    UINT32,   (message,get_ad_hoc_telemetry,message.get_ad_hoc_telemetry),  11)
 #define meshtastic_CrisislabMessage_CALLBACK NULL
 #define meshtastic_CrisislabMessage_DEFAULT NULL
@@ -169,7 +169,7 @@ X(a, STATIC,   ONEOF,    UINT32,   (message,get_ad_hoc_telemetry,message.get_ad_
 #define meshtastic_CrisislabMessage_message_updated_next_hops_MSGTYPE meshtastic_CrisislabMessage_NextHopsMap
 #define meshtastic_CrisislabMessage_message_start_live_telemetry_MSGTYPE meshtastic_CrisislabMessage_Empty
 #define meshtastic_CrisislabMessage_message_stop_live_telemetry_MSGTYPE meshtastic_CrisislabMessage_Empty
-#define meshtastic_CrisislabMessage_message_live_telemetry_MSGTYPE meshtastic_CrisislabMessage_Telemetry
+#define meshtastic_CrisislabMessage_message_telemetry_MSGTYPE meshtastic_CrisislabMessage_Telemetry
 
 #define meshtastic_CrisislabMessage_SignalData_FIELDLIST(X, a) \
 X(a, STATIC,   SINGULAR, UINT32,   to,                1) \
@@ -268,7 +268,7 @@ extern const pb_msgdesc_t meshtastic_CrisislabMessage_Telemetry_msg;
 #define meshtastic_CrisislabMessage_ServerSettings_size 6
 #define meshtastic_CrisislabMessage_SignalData_Entry_size 22
 #define meshtastic_CrisislabMessage_SignalData_size 248
-#define meshtastic_CrisislabMessage_Telemetry_size 308
+#define meshtastic_CrisislabMessage_Telemetry_size 310
 
 #ifdef __cplusplus
 } /* extern "C" */

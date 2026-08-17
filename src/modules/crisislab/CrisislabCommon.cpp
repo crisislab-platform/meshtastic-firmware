@@ -408,7 +408,7 @@ void CrisislabCommon::handleCrisislabMessage(
 
 			break;
 		}
-		case meshtastic_CrisislabMessage_live_telemetry_tag: {
+		case meshtastic_CrisislabMessage_telemetry_tag: {
 #if MESHTASTIC_CRISISLAB_GATEWAY
 			LOG_INFO("Handling \"live telemetry\" from node %u", meshPacket->from);
 
@@ -418,7 +418,7 @@ void CrisislabCommon::handleCrisislabMessage(
 			}
 
 			meshtastic_CrisislabMessage messageCopy = message;
-			messageCopy.message.live_telemetry.timestamp = CrisislabCommon::secondsSinceEpoch();
+			messageCopy.message.telemetry.timestamp = CrisislabCommon::secondsSinceEpoch();
 
 			std::vector<uint8_t> encodedBytes(meshtastic_Constants_DATA_PAYLOAD_LEN);
 			size_t bytesWritten = pb_encode_to_bytes(
@@ -556,28 +556,28 @@ void CrisislabCommon::sendLiveTelemetry(void *params) {
 		LOG_DEBUG("Sending live telemetry packet");
 
 		meshtastic_CrisislabMessage message = meshtastic_CrisislabMessage_init_default;
-		message.which_message = meshtastic_CrisislabMessage_live_telemetry_tag;
-		message.message.live_telemetry.node_num = nodeDB->getNodeNum();
-		message.message.live_telemetry.timestamp = self->secondsSinceEpoch();
+		message.which_message = meshtastic_CrisislabMessage_telemetry_tag;
+		message.message.telemetry.node_num = nodeDB->getNodeNum();
+		message.message.telemetry.timestamp = self->secondsSinceEpoch();
 
-		message.message.live_telemetry.has_user = true;
+		message.message.telemetry.has_user = true;
 		memcpy(
-			&message.message.live_telemetry.user,
+			&message.message.telemetry.user,
 			&owner,
 			sizeof(meshtastic_User)
 		);
 
-		message.message.live_telemetry.has_position = true;
+		message.message.telemetry.has_position = true;
 		memcpy(
-			&message.message.live_telemetry.position,
+			&message.message.telemetry.position,
 			&localPosition,
 			sizeof(meshtastic_Position)
 		);
 
-		message.message.live_telemetry.has_device_metrics = true;
+		message.message.telemetry.has_device_metrics = true;
 		const meshtastic_Telemetry telemetry = deviceTelemetryModule->getDeviceTelemetry();
 		memcpy(
-			&message.message.live_telemetry.device_metrics,
+			&message.message.telemetry.device_metrics,
 			&telemetry.variant.device_metrics,
 			sizeof(meshtastic_DeviceMetrics)
 		);
