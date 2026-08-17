@@ -14,6 +14,7 @@
 #include "mqtt/MQTT.h"
 #include "../../mesh/generated/meshtastic/crisislab.pb.h"
 #include "../Telemetry/DeviceTelemetry.h"
+#include "main.h"
 
 static StaticTask_t g_pingTCB;
 static StackType_t  g_pingStack[4096];
@@ -139,6 +140,13 @@ meshtastic_MeshPacket *CrisislabCommon::allocMeshPacket(NodeNum to, meshtastic_P
 	return meshPacket;
 }
 
+void CrisislabCommon::scheduleReboot(int32_t seconds)
+{
+	LOG_INFO("Crisislab: rebooting in %d seconds to apply change", seconds);
+	screen->startAlert("Rebooting...");
+	rebootAtMsec = millis() + seconds * 1000;
+}
+
 void CrisislabCommon::handleCrisislabMessage(
 	meshtastic_CrisislabMessage &message,
 	const meshtastic_MeshPacket *meshPacket
@@ -168,6 +176,8 @@ void CrisislabCommon::handleCrisislabMessage(
 			}
 
 			preferences.end();
+
+			this->scheduleReboot(DEFAULT_REBOOT_SECONDS);
 
 			break;
 		}
@@ -394,6 +404,8 @@ void CrisislabCommon::handleCrisislabMessage(
 				this->liveDataTaskHandle = nullptr;
 			}
 
+			this->scheduleReboot(DEFAULT_REBOOT_SECONDS);
+
 			break;
 		}
 		case meshtastic_CrisislabMessage_live_telemetry_tag: {
@@ -482,18 +494,13 @@ ProcessMessage CrisislabCommon::handleReceived(const meshtastic_MeshPacket &mesh
 		preferences.getBytes("next_hops", &bestNextHop, sizeof(uint32_t));
 		preferences.end();
 
-		meshtastic_MeshPacket toForward;
-		mempcpy(
-			&toForward,
-			&meshPacket,
-			sizeof(meshtastic_MeshPacket)
-		);
+		meshtastic_MeshPacket *toForward = router->allocForSending();
+		toForward->to = bestNextHop;
+		toForward->from = nodeDB->getNodeNum();
+		toForward->channel = this->channelIndex;
+		toForward->decoded = meshPacket.decoded;
 
-		toForward.to = bestNextHop;
-		toForward.from = nodeDB->getNodeNum();
-		toForward.channel = this->channelIndex;
-
-		service->sendToMesh(&toForward);
+		service->sendToMesh(toForward);
 #else
 		gatewayModule->handleNormalMeshPacket(meshPacket);
 #endif

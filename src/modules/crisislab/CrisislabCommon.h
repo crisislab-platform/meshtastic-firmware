@@ -51,6 +51,8 @@ class CrisislabCommon : public MeshModule
 	static void sendLiveTelemetry(void *params);
 	static void returnSignalData(void *params);
 
+	void scheduleReboot(int32_t seconds);
+
 	bool decodeCrisislabMessageFromBytes(
 		byte *buffer,
 		unsigned int bufferLength,
