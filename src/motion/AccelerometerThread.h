@@ -4,14 +4,19 @@
 
 #include "configuration.h"
 
-#if !defined(ARCH_PORTDUINO) && !defined(ARCH_STM32WL) && !MESHTASTIC_EXCLUDE_I2C
+#if !defined(ARCH_STM32WL) && !MESHTASTIC_EXCLUDE_I2C && !MESHTASTIC_EXCLUDE_ACCELEROMETER
 
 #include "../concurrency/OSThread.h"
 #ifdef HAS_BMA423
 #include "BMA423Sensor.h"
 #endif
+#ifdef HAS_BMI270
+#include "BMI270Sensor.h"
+#endif
+#include "BMM150Sensor.h"
 #include "BMX160Sensor.h"
 #include "ICM20948Sensor.h"
+#include "ICM42607PSensor.h"
 #include "LIS3DHSensor.h"
 #include "LSM6DS3Sensor.h"
 #include "MPU6050Sensor.h"
@@ -81,14 +86,6 @@ class AccelerometerThread : public concurrency::OSThread
             return;
         }
 
-#ifndef RAK_4631
-        if (!config.display.wake_on_tap_or_motion && !config.device.double_tap_as_button_press) {
-            LOG_DEBUG("AccelerometerThread Disable due to no interested configurations");
-            disable();
-            return;
-        }
-#endif
-
         switch (device.type) {
 #ifdef HAS_BMA423
         case ScanI2C::DeviceType::BMA423:
@@ -115,6 +112,17 @@ class AccelerometerThread : public concurrency::OSThread
         case ScanI2C::DeviceType::ICM20948:
             sensor = new ICM20948Sensor(device);
             break;
+        case ScanI2C::DeviceType::ICM42607P:
+            sensor = new ICM42607PSensor(device);
+            break;
+        case ScanI2C::DeviceType::BMM150:
+            sensor = new BMM150Sensor(device);
+            break;
+#ifdef HAS_BMI270
+        case ScanI2C::DeviceType::BMI270:
+            sensor = new BMI270Sensor(device);
+            break;
+#endif
 #ifdef HAS_QMA6100P
         case ScanI2C::DeviceType::QMA6100P:
             sensor = new QMA6100PSensor(device);
@@ -160,10 +168,8 @@ class AccelerometerThread : public concurrency::OSThread
     void clean()
     {
         isInitialised = false;
-        if (sensor != nullptr) {
-            delete sensor;
-            sensor = nullptr;
-        }
+        delete sensor;
+        sensor = nullptr;
     }
 };
 

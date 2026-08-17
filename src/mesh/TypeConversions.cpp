@@ -1,6 +1,7 @@
 #include "TypeConversions.h"
 #include "mesh/generated/meshtastic/deviceonly.pb.h"
 #include "mesh/generated/meshtastic/mesh.pb.h"
+#include "meshUtils.h"
 
 meshtastic_NodeInfo TypeConversions::ConvertToNodeInfo(const meshtastic_NodeInfoLite *lite)
 {
@@ -13,6 +14,8 @@ meshtastic_NodeInfo TypeConversions::ConvertToNodeInfo(const meshtastic_NodeInfo
     info.via_mqtt = lite->via_mqtt;
     info.is_favorite = lite->is_favorite;
     info.is_ignored = lite->is_ignored;
+    info.is_key_manually_verified = lite->bitfield & NODEINFO_BITFIELD_IS_KEY_MANUALLY_VERIFIED_MASK;
+    info.is_muted = lite->bitfield & NODEINFO_BITFIELD_IS_MUTED_MASK;
 
     if (lite->has_hops_away) {
         info.has_hops_away = true;
@@ -79,13 +82,19 @@ meshtastic_UserLite TypeConversions::ConvertToUserLite(meshtastic_User user)
     meshtastic_UserLite lite = meshtastic_UserLite_init_default;
 
     strncpy(lite.long_name, user.long_name, sizeof(lite.long_name));
+    lite.long_name[sizeof(lite.long_name) - 1] = '\0';
+    sanitizeUtf8(lite.long_name, sizeof(lite.long_name));
     strncpy(lite.short_name, user.short_name, sizeof(lite.short_name));
+    lite.short_name[sizeof(lite.short_name) - 1] = '\0';
+    sanitizeUtf8(lite.short_name, sizeof(lite.short_name));
     lite.hw_model = user.hw_model;
     lite.role = user.role;
     lite.is_licensed = user.is_licensed;
     memcpy(lite.macaddr, user.macaddr, sizeof(lite.macaddr));
     memcpy(lite.public_key.bytes, user.public_key.bytes, sizeof(lite.public_key.bytes));
     lite.public_key.size = user.public_key.size;
+    lite.has_is_unmessagable = user.has_is_unmessagable;
+    lite.is_unmessagable = user.is_unmessagable;
     return lite;
 }
 
@@ -95,13 +104,19 @@ meshtastic_User TypeConversions::ConvertToUser(uint32_t nodeNum, meshtastic_User
 
     snprintf(user.id, sizeof(user.id), "!%08x", nodeNum);
     strncpy(user.long_name, lite.long_name, sizeof(user.long_name));
+    user.long_name[sizeof(user.long_name) - 1] = '\0';
+    sanitizeUtf8(user.long_name, sizeof(user.long_name));
     strncpy(user.short_name, lite.short_name, sizeof(user.short_name));
+    user.short_name[sizeof(user.short_name) - 1] = '\0';
+    sanitizeUtf8(user.short_name, sizeof(user.short_name));
     user.hw_model = lite.hw_model;
     user.role = lite.role;
     user.is_licensed = lite.is_licensed;
     memcpy(user.macaddr, lite.macaddr, sizeof(user.macaddr));
     memcpy(user.public_key.bytes, lite.public_key.bytes, sizeof(user.public_key.bytes));
     user.public_key.size = lite.public_key.size;
+    user.has_is_unmessagable = lite.has_is_unmessagable;
+    user.is_unmessagable = lite.is_unmessagable;
 
     return user;
 }

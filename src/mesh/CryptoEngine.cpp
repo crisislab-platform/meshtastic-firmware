@@ -1,14 +1,21 @@
 #include "CryptoEngine.h"
 // #include "NodeDB.h"
 #include "architecture.h"
+#include <memory>
 
 #if !(MESHTASTIC_EXCLUDE_PKI)
+#include "HardwareRNG.h"
+#include "NodeDB.h"
 #include "aes-ccm.h"
 #include "meshUtils.h"
 #include <Crypto.h>
 #include <Curve25519.h>
+#include <RNG.h>
 #include <SHA256.h>
 #if !(MESHTASTIC_EXCLUDE_PKI_KEYGEN)
+#if !defined(ARCH_STM32WL)
+#define CryptRNG RNG
+#endif
 
 /**
  * Create a public/private key pair with Curve25519.
@@ -18,6 +25,23 @@
  */
 void CryptoEngine::generateKeyPair(uint8_t *pubKey, uint8_t *privKey)
 {
+    // Mix in any randomness we can, to make key generation stronger.
+    CryptRNG.begin(optstr(APP_VERSION));
+
+    uint8_t hardwareEntropy[64] = {0};
+    if (HardwareRNG::fill(hardwareEntropy, sizeof(hardwareEntropy), true)) {
+        CryptRNG.stir(hardwareEntropy, sizeof(hardwareEntropy));
+    } else {
+        LOG_WARN("Hardware entropy unavailable, falling back to software RNG");
+    }
+    memset(hardwareEntropy, 0, sizeof(hardwareEntropy));
+
+    if (myNodeInfo.device_id.size == 16) {
+        CryptRNG.stir(myNodeInfo.device_id.bytes, myNodeInfo.device_id.size);
+    }
+    auto noise = random();
+    CryptRNG.stir((uint8_t *)&noise, sizeof(noise));
+
     LOG_DEBUG("Generate Curve25519 keypair");
     Curve25519::dh1(public_key, private_key);
     memcpy(pubKey, public_key, sizeof(public_key));
@@ -48,11 +72,6 @@ bool CryptoEngine::regeneratePublicKey(uint8_t *pubKey, uint8_t *privKey)
     return true;
 }
 #endif
-void CryptoEngine::clearKeys()
-{
-    memset(public_key, 0, sizeof(public_key));
-    memset(private_key, 0, sizeof(private_key));
-}
 
 /**
  * Encrypt a packet's payload using a key generated with Curve25519 and SHA256
@@ -74,15 +93,15 @@ bool CryptoEngine::encryptCurve25519(uint32_t toNode, uint32_t fromNode, meshtas
     auth = bytesOut + numBytes;
     memcpy((uint8_t *)(auth + 8), &extraNonceTmp,
            sizeof(uint32_t)); // do not use dereference on potential non aligned pointers : *extraNonce = extraNonceTmp;
-    LOG_INFO("Random nonce value: %d", extraNonceTmp);
+    LOG_DEBUG("Random nonce value: %d", extraNonceTmp);
     if (remotePublic.size == 0) {
         LOG_DEBUG("Node %d or their public_key not found", toNode);
         return false;
     }
-    if (!crypto->setDHPublicKey(remotePublic.bytes)) {
+    if (!setDHPublicKey(remotePublic.bytes)) {
         return false;
     }
-    crypto->hash(shared_key, 32);
+    hash(shared_key, 32);
     initNonce(fromNode, packetNum, extraNonceTmp);
 
     // Calculate the shared secret with the destination node and encrypt
@@ -121,10 +140,10 @@ bool CryptoEngine::decryptCurve25519(uint32_t fromNode, meshtastic_UserLite_publ
     }
 
     // Calculate the shared secret with the sending node and decrypt
-    if (!crypto->setDHPublicKey(remotePublic.bytes)) {
+    if (!setDHPublicKey(remotePublic.bytes)) {
         return false;
     }
-    crypto->hash(shared_key, 32);
+    hash(shared_key, 32);
 
     initNonce(fromNode, packetNum, extraNonce);
     printBytes("Attempt decrypt with nonce: ", nonce, 13);
@@ -161,12 +180,9 @@ void CryptoEngine::hash(uint8_t *bytes, size_t numBytes)
 
 void CryptoEngine::aesSetKey(const uint8_t *key_bytes, size_t key_len)
 {
-    if (aes) {
-        delete aes;
-        aes = nullptr;
-    }
+    aes = nullptr;
     if (key_len != 0) {
-        aes = new AESSmall256();
+        aes = std::unique_ptr<AESSmall256>(new AESSmall256());
         aes->setKey(key_bytes, key_len);
     }
 }
@@ -225,14 +241,11 @@ void CryptoEngine::decrypt(uint32_t fromNode, uint64_t packetId, size_t numBytes
 // Generic implementation of AES-CTR encryption.
 void CryptoEngine::encryptAESCtr(CryptoKey _key, uint8_t *_nonce, size_t numBytes, uint8_t *bytes)
 {
-    if (ctr) {
-        delete ctr;
-        ctr = nullptr;
-    }
+    std::unique_ptr<CTRCommon> ctr;
     if (_key.length == 16)
-        ctr = new CTR<AES128>();
+        ctr = std::unique_ptr<CTRCommon>(new CTR<AES128>());
     else
-        ctr = new CTR<AES256>();
+        ctr = std::unique_ptr<CTRCommon>(new CTR<AES256>());
     ctr->setKey(_key.bytes, _key.length);
     static uint8_t scratch[MAX_BLOCKSIZE];
     memcpy(scratch, bytes, numBytes);

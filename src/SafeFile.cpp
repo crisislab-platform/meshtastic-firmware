@@ -11,11 +11,17 @@ static File openFile(const char *filename, bool fullAtomic)
     FSCom.remove(filename);
     return FSCom.open(filename, FILE_O_WRITE);
 #endif
-    if (!fullAtomic)
+    if (!fullAtomic) {
         FSCom.remove(filename); // Nuke the old file to make space (ignore if it !exists)
+    }
 
     String filenameTmp = filename;
     filenameTmp += ".tmp";
+
+    // FIXME: If we are doing a full atomic write, we may need to remove the old tmp file now
+    // if (fullAtomic) {
+    //     FSCom.remove(filename);
+    // }
 
     // clear any previous LFS errors
     return FSCom.open(filenameTmp.c_str(), FILE_O_WRITE);
@@ -48,7 +54,7 @@ size_t SafeFile::write(const uint8_t *buffer, size_t size)
 }
 
 /**
- * Atomically close the file (deleting any old versions) and readback the contents to confirm the hash matches
+ * Atomically close the file (overwriting any old version) and readback the contents to confirm the hash matches
  *
  * @return false for failure
  */
@@ -67,15 +73,7 @@ bool SafeFile::close()
     if (!testReadback())
         return false;
 
-    { // Scope for lock
-        concurrency::LockGuard g(spiLock);
-        // brief window of risk here ;-)
-        if (fullAtomic && FSCom.exists(filename.c_str()) && !FSCom.remove(filename.c_str())) {
-            LOG_ERROR("Can't remove old pref file");
-            return false;
-        }
-    }
-
+    // Rename or overwrite (atomic operation)
     String filenameTmp = filename;
     filenameTmp += ".tmp";
     if (!renameFile(filenameTmp.c_str(), filename.c_str())) {

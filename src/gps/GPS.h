@@ -2,6 +2,8 @@
 #include "configuration.h"
 #if !MESHTASTIC_EXCLUDE_GPS
 
+#include <memory>
+
 #include "GPSStatus.h"
 #include "GpioLogic.h"
 #include "Observer.h"
@@ -16,6 +18,14 @@
 #define GPS_EN_ACTIVE 1
 #endif
 
+// Allow defining the polarity of the STANDBY output.  default is LOW for standby
+#ifndef GPS_STANDBY_ACTIVE
+#define GPS_STANDBY_ACTIVE LOW
+#endif
+
+static constexpr uint32_t GPS_UPDATE_ALWAYS_ON_THRESHOLD_MS = 10 * 1000UL;
+static constexpr uint32_t GPS_FIX_HOLD_MAX_MS = 20000;
+
 typedef enum {
     GNSS_MODEL_ATGM336H,
     GNSS_MODEL_MTK,
@@ -27,10 +37,12 @@ typedef enum {
     GNSS_MODEL_UC6580,
     GNSS_MODEL_UNKNOWN,
     GNSS_MODEL_MTK_L76B,
+    GNSS_MODEL_MTK_PA1010D,
     GNSS_MODEL_MTK_PA1616S,
     GNSS_MODEL_AG3335,
     GNSS_MODEL_AG3352,
-    GNSS_MODEL_LS20031
+    GNSS_MODEL_LS20031,
+    GNSS_MODEL_CM121
 } GnssModel_t;
 
 typedef enum {
@@ -48,6 +60,11 @@ enum GPSPowerState : uint8_t {
     GPS_OFF        // Powered off indefinitely
 };
 
+struct ChipInfo {
+    String chipName;        // The name of the chip (for logging)
+    String detectionString; // The string to match in the response
+    GnssModel_t driver;     // The driver to use
+};
 /**
  * A gps class that only reads from the GPS periodically and keeps the gps powered down except when reading
  *
@@ -101,11 +118,9 @@ class GPS : private concurrency::OSThread
     // Empty the input buffer as quickly as possible
     void clearBuffer();
 
-    virtual bool factoryReset();
-
     // Creates an instance of the GPS class.
     // Returns the new instance or null if the GPS is not present.
-    static GPS *createGps();
+    static std::unique_ptr<GPS> createGps();
 
     // Wake the GPS hardware - ready for an update
     void up();
@@ -146,6 +161,9 @@ class GPS : private concurrency::OSThread
     TinyGPSPlus reader;
     uint8_t fixQual = 0; // fix quality from GPGGA
     uint32_t lastChecksumFailCount = 0;
+    uint8_t currentStep = 0;
+    int32_t currentDelay = 2000;
+    bool gotTime = false;
 
 #ifndef TINYGPS_OPTION_NO_CUSTOM_FIELDS
     // (20210908) TinyGps++ can only read the GPGSA "FIX TYPE" field
@@ -155,7 +173,7 @@ class GPS : private concurrency::OSThread
     uint8_t fixType = 0;      // fix type from GPGSA
 #endif
 
-    uint32_t lastWakeStartMsec = 0, lastSleepStartMsec = 0, lastFixStartMsec = 0;
+    uint32_t fixHoldEnds = 0;
     uint32_t rx_gpio = 0;
     uint32_t tx_gpio = 0;
 
@@ -167,8 +185,6 @@ class GPS : private concurrency::OSThread
      *   GPS location, valid and fresh (< gps_update_interval + position_broadcast_secs)
      */
     bool hasValidLocation = false; // default to false, until we complete our first read
-
-    bool isInPowersave = false;
 
     bool shouldPublish = false; // If we've changed GPS state, this will force a publish the next loop()
 
@@ -186,6 +202,8 @@ class GPS : private concurrency::OSThread
     /** If !NULL we will use this serial port to construct our GPS */
 #if defined(ARCH_RP2040)
     static SerialUART *_serial_gps;
+#elif defined(ARCH_NRF52)
+    static Uart *_serial_gps;
 #else
     static HardwareSerial *_serial_gps;
 #endif
@@ -232,6 +250,8 @@ class GPS : private concurrency::OSThread
 
     virtual int32_t runOnce() override;
 
+    GnssModel_t getProbeResponse(unsigned long timeout, const std::vector<ChipInfo> &responseMap, int serialSpeed);
+
     // Get GNSS model
     GnssModel_t probe(int serialSpeed);
 
@@ -239,5 +259,5 @@ class GPS : private concurrency::OSThread
     uint8_t fixeddelayCtr = 0;
 };
 
-extern GPS *gps;
+extern std::unique_ptr<GPS> gps;
 #endif // Exclude GPS

@@ -10,7 +10,7 @@ EInkDynamicDisplay::EInkDynamicDisplay(uint8_t address, int sda, int scl, OLEDDI
 {
     // If tracking ghost pixels, grab memory
 #ifdef EINK_LIMIT_GHOSTING_PX
-    dirtyPixels = new uint8_t[EInkDisplay::displayBufferSize](); // Init with zeros
+    dirtyPixels = std::unique_ptr<uint8_t[]>(new uint8_t[EInkDisplay::displayBufferSize]()); // Init with zeros
 #endif
 }
 
@@ -19,7 +19,7 @@ EInkDynamicDisplay::~EInkDynamicDisplay()
 {
     // If we were tracking ghost pixels, free the memory
 #ifdef EINK_LIMIT_GHOSTING_PX
-    delete[] dirtyPixels;
+    dirtyPixels = nullptr;
 #endif
 }
 
@@ -95,7 +95,7 @@ void EInkDynamicDisplay::adjustRefreshCounters()
 // Trigger the display update by calling base class
 bool EInkDynamicDisplay::update()
 {
-    // Detemine the refresh mode to use, and start the update
+    // Determine the refresh mode to use, and start the update
     bool refreshApproved = determineMode();
     if (refreshApproved) {
         EInkDisplay::forceDisplay(0); // Bypass base class' own rate-limiting system
@@ -238,7 +238,7 @@ void EInkDynamicDisplay::checkRateLimiting()
 
     // Skip update: too soon for BACKGROUND
     if (frameFlags == BACKGROUND) {
-        if (Throttle::isWithinTimespanMs(previousRunMs, EINK_LIMIT_RATE_BACKGROUND_SEC * 1000)) {
+        if (Throttle::isWithinTimespanMs(previousRunMs, 30000)) {
             refresh = SKIPPED;
             reason = EXCEEDED_RATELIMIT_FULL;
             return;
@@ -251,7 +251,7 @@ void EInkDynamicDisplay::checkRateLimiting()
 
     // Skip update: too soon for RESPONSIVE
     if (frameFlags & RESPONSIVE) {
-        if (Throttle::isWithinTimespanMs(previousRunMs, EINK_LIMIT_RATE_RESPONSIVE_SEC * 1000)) {
+        if (Throttle::isWithinTimespanMs(previousRunMs, 1000)) {
             refresh = SKIPPED;
             reason = EXCEEDED_RATELIMIT_FAST;
             LOG_DEBUG("refresh=SKIPPED, reason=EXCEEDED_RATELIMIT_FAST, frameFlags=0x%x", frameFlags);
@@ -317,12 +317,20 @@ void EInkDynamicDisplay::checkFrameMatchesPrevious()
     LOG_DEBUG("refresh=SKIPPED, reason=FRAME_MATCHED_PREVIOUS, frameFlags=0x%x", frameFlags);
 }
 
-// Have too many fast-refreshes occured consecutively, since last full refresh?
+// Have too many fast-refreshes occurred consecutively, since last full refresh?
 void EInkDynamicDisplay::checkConsecutiveFastRefreshes()
 {
     // If a decision was already reached, don't run the check
     if (refresh != UNSPECIFIED)
         return;
+
+    // Bypass limit if UNLIMITED_FAST mode is active
+    if (frameFlags & UNLIMITED_FAST) {
+        refresh = FAST;
+        reason = NO_OBJECTIONS;
+        LOG_DEBUG("refresh=FAST, reason=UNLIMITED_FAST_MODE_ACTIVE, frameFlags=0x%x", frameFlags);
+        return;
+    }
 
     // If too many FAST refreshes consecutively - force a FULL refresh
     if (fastRefreshCount >= EINK_LIMIT_FASTREFRESH) {
@@ -446,7 +454,7 @@ void EInkDynamicDisplay::checkExcessiveGhosting()
 void EInkDynamicDisplay::resetGhostPixelTracking()
 {
     // Copy the current frame into dirtyPixels[] from the display buffer
-    memcpy(dirtyPixels, EInkDisplay::buffer, EInkDisplay::displayBufferSize);
+    memcpy(dirtyPixels.get(), EInkDisplay::buffer, EInkDisplay::displayBufferSize);
 }
 #endif // EINK_LIMIT_GHOSTING_PX
 

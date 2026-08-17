@@ -1,6 +1,11 @@
 #include "ICM20948Sensor.h"
 
-#if !defined(ARCH_PORTDUINO) && !defined(ARCH_STM32WL) && !MESHTASTIC_EXCLUDE_I2C
+#if !defined(ARCH_STM32WL) && !MESHTASTIC_EXCLUDE_I2C && __has_include(<ICM_20948.h>)
+#if !defined(MESHTASTIC_EXCLUDE_SCREEN)
+
+// screen is defined in main.cpp
+extern graphics::Screen *screen;
+#endif
 
 // Flag when an interrupt has been detected
 volatile static bool ICM20948_IRQ = false;
@@ -21,7 +26,11 @@ bool ICM20948Sensor::init()
         return false;
 
     // Enable simple Wake on Motion
-    return sensor->setWakeOnMotion();
+    bool wakeOnMotionOk = sensor->setWakeOnMotion();
+    if (wakeOnMotionOk) {
+        loadMagnetometerCalibration(compassCalibrationFileName, highestX, lowestX, highestY, lowestY, highestZ, lowestZ);
+    }
+    return wakeOnMotionOk;
 }
 
 #ifdef ICM_20948_INT_PIN
@@ -41,6 +50,60 @@ int32_t ICM20948Sensor::runOnce()
 
 int32_t ICM20948Sensor::runOnce()
 {
+#if !defined(MESHTASTIC_EXCLUDE_SCREEN) && HAS_SCREEN
+    if (screen && !doCalibration && !screen->isScreenOn() && !config.display.wake_on_tap_or_motion &&
+        !config.device.double_tap_as_button_press) {
+        if (!isAsleep) {
+            LOG_DEBUG("sleeping IMU");
+            sensor->sleep(true);
+            isAsleep = true;
+        }
+        return MOTION_SENSOR_CHECK_INTERVAL_MS;
+    }
+    if (isAsleep) {
+        sensor->sleep(false);
+        isAsleep = false;
+    }
+
+    float magX = 0, magY = 0, magZ = 0;
+    if (sensor->dataReady()) {
+        sensor->getAGMT();
+        magX = sensor->agmt.mag.axes.x;
+        magY = sensor->agmt.mag.axes.y;
+        magZ = sensor->agmt.mag.axes.z;
+    }
+
+    if (doCalibration) {
+        beginCalibrationDisplay(showingScreen);
+        updateCalibrationExtrema(magX, magY, magZ, highestX, lowestX, highestY, lowestY, highestZ, lowestZ);
+        finishCalibrationIfExpired(showingScreen, compassCalibrationFileName, highestX, lowestX, highestY, lowestY, highestZ,
+                                   lowestZ);
+    }
+
+    magX -= (highestX + lowestX) / 2;
+    magY -= (highestY + lowestY) / 2;
+    magZ -= (highestZ + lowestZ) / 2;
+    FusionVector ga, ma;
+    ga.axis.x = (sensor->agmt.acc.axes.x);
+    ga.axis.y = -(sensor->agmt.acc.axes.y);
+    ga.axis.z = -(sensor->agmt.acc.axes.z);
+    ma.axis.x = magX;
+    ma.axis.y = magY;
+    ma.axis.z = magZ;
+
+    // If we're set to one of the inverted positions
+    if (config.display.compass_orientation > meshtastic_Config_DisplayConfig_CompassOrientation_DEGREES_270) {
+        ma = FusionAxesSwap(ma, FusionAxesAlignmentNXNYPZ);
+        ga = FusionAxesSwap(ga, FusionAxesAlignmentNXNYPZ);
+    }
+
+    float heading = FusionCompassCalculateHeading(FusionConventionNed, ga, ma);
+
+    heading = applyCompassOrientation(heading);
+    if (screen)
+        screen->setHeading(heading);
+#endif
+
     // Wake on motion using polling  - this is not as efficient as using hardware interrupt pin (see above)
     auto status = sensor->setBank(0);
     if (sensor->status != ICM_20948_Stat_Ok) {
@@ -64,6 +127,21 @@ int32_t ICM20948Sensor::runOnce()
 
 #endif
 
+void ICM20948Sensor::calibrate(uint16_t forSeconds)
+{
+#if !defined(MESHTASTIC_EXCLUDE_SCREEN) && HAS_SCREEN
+    LOG_DEBUG("ICM20948 cal start %is", forSeconds);
+    if (sensor->dataReady()) {
+        sensor->getAGMT();
+        seedCalibrationExtrema(sensor->agmt.mag.axes.x, sensor->agmt.mag.axes.y, sensor->agmt.mag.axes.z, highestX, lowestX,
+                               highestY, lowestY, highestZ, lowestZ);
+    } else {
+        seedCalibrationExtrema(0.0f, 0.0f, 0.0f, highestX, lowestX, highestY, lowestY, highestZ, lowestZ);
+    }
+
+    startCalibrationWindow(forSeconds);
+#endif
+}
 // ----------------------------------------------------------------------
 // ICM20948Singleton
 // ----------------------------------------------------------------------
@@ -91,13 +169,19 @@ bool ICM20948Singleton::init(ScanI2C::FoundDevice device)
     enableDebugging();
 #endif
 
-// startup
-#ifdef Wire1
-    ICM_20948_Status_e status =
-        begin(device.address.port == ScanI2C::I2CPort::WIRE1 ? Wire1 : Wire, device.address.address == ICM20948_ADDR ? 1 : 0);
+    // startup
+#if defined(WIRE_INTERFACES_COUNT) && (WIRE_INTERFACES_COUNT > 1)
+    TwoWire &bus = (device.address.port == ScanI2C::I2CPort::WIRE1 ? Wire1 : Wire);
 #else
-    ICM_20948_Status_e status = begin(Wire, device.address.address == ICM20948_ADDR ? 1 : 0);
+    TwoWire &bus = Wire; // fallback if only one I2C interface
 #endif
+
+    bool bAddr = (device.address.address == 0x69);
+    delay(100);
+
+    LOG_DEBUG("ICM20948 begin on addr 0x%02X (port=%d, bAddr=%d)", device.address.address, device.address.port, bAddr);
+
+    ICM_20948_Status_e status = begin(bus, bAddr);
     if (status != ICM_20948_Stat_Ok) {
         LOG_DEBUG("ICM20948 init begin - %s", statusString());
         return false;
@@ -118,6 +202,11 @@ bool ICM20948Singleton::init(ScanI2C::FoundDevice device)
 
     if (lowPower(false) != ICM_20948_Stat_Ok) {
         LOG_DEBUG("ICM20948 init high power - %s", statusString());
+        return false;
+    }
+
+    if (startupMagnetometer(false) != ICM_20948_Stat_Ok) {
+        LOG_DEBUG("ICM20948 init magnetometer - %s", statusString());
         return false;
     }
 
@@ -176,11 +265,6 @@ bool ICM20948Singleton::setWakeOnMotion()
     status = intEnableWOM(true);
     LOG_DEBUG("ICM20948 init set intEnableWOM - %s", statusString());
     return status == ICM_20948_Stat_Ok;
-
-    // Clear any current interrupts
-    ICM20948_IRQ = false;
-    clearInterrupts();
-    return true;
 }
 
 #endif

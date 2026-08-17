@@ -1,7 +1,7 @@
 name: Bug Report
 description: File a bug report
 title: "[Bug]: "
-labels: ["bug", "triage"]
+labels: [bug, triage]
 body:
   - type: markdown
     attributes:
@@ -71,6 +71,15 @@ body:
         - Other
     validations:
       required: true
+
+  - type: checkboxes
+    id: mui
+    attributes:
+      label: Is this bug report about any UI (https://meshtastic.org/docs/configuration/device-uis/) component firmware?
+      options:
+        - label: Meshtastic UI aka MUI
+        - label: InkHUD
+        - label: BaseUI
 
   - type: input
     id: version

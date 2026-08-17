@@ -12,42 +12,23 @@
 #include "SPILock.h"
 #include "configuration.h"
 
-#ifdef HAS_SDCARD
+// Software SPI is used by MUI so disable SD card here until it's also implemented
+#if defined(HAS_SDCARD) && !defined(SDCARD_USE_SOFT_SPI)
 #include <SD.h>
 #include <SPI.h>
 
 #ifdef SDCARD_USE_SPI1
-SPIClass SPI1(HSPI);
-#define SDHandler SPI1
+SPIClass SPI_HSPI(HSPI);
+#define SDHandler SPI_HSPI
 #else
 #define SDHandler SPI
 #endif
 
-#endif // HAS_SDCARD
-
-#if defined(ARCH_STM32WL)
-
-uint16_t OSFS::startOfEEPROM = 1;
-uint16_t OSFS::endOfEEPROM = 2048;
-
-// 3) How do I read from the medium?
-void OSFS::readNBytes(uint16_t address, unsigned int num, byte *output)
-{
-    for (uint16_t i = address; i < address + num; i++) {
-        *output = EEPROM.read(i);
-        output++;
-    }
-}
-
-// 4) How to I write to the medium?
-void OSFS::writeNBytes(uint16_t address, unsigned int num, const byte *input)
-{
-    for (uint16_t i = address; i < address + num; i++) {
-        EEPROM.update(i, *input);
-        input++;
-    }
-}
+#ifndef SD_SPI_FREQUENCY
+#define SD_SPI_FREQUENCY 4000000U
 #endif
+
+#endif // HAS_SDCARD
 
 /**
  * @brief Copies a file from one location to another.
@@ -58,33 +39,7 @@ void OSFS::writeNBytes(uint16_t address, unsigned int num, const byte *input)
  */
 bool copyFile(const char *from, const char *to)
 {
-#ifdef ARCH_STM32WL
-    unsigned char cbuffer[2048];
-
-    // Var to hold the result of actions
-    OSFS::result r;
-
-    r = OSFS::getFile(from, cbuffer);
-
-    if (r == notfound) {
-        LOG_ERROR("Failed to open source file %s", from);
-        return false;
-    } else if (r == noerr) {
-        r = OSFS::newFile(to, cbuffer, true);
-        if (r == noerr) {
-            return true;
-        } else {
-            LOG_ERROR("OSFS Error %d", r);
-            return false;
-        }
-
-    } else {
-        LOG_ERROR("OSFS Error %d", r);
-        return false;
-    }
-    return true;
-
-#elif defined(FSCom)
+#ifdef FSCom
     // take SPI Lock
     concurrency::LockGuard g(spiLock);
     unsigned char cbuffer[16];
@@ -123,13 +78,7 @@ bool copyFile(const char *from, const char *to)
  */
 bool renameFile(const char *pathFrom, const char *pathTo)
 {
-#ifdef ARCH_STM32WL
-    if (copyFile(pathFrom, pathTo) && (OSFS::deleteFile(pathFrom) == OSFS::result::NO_ERROR)) {
-        return true;
-    } else {
-        return false;
-    }
-#elif defined(FSCom)
+#ifdef FSCom
 
 #ifdef ARCH_ESP32
     // take SPI Lock
@@ -150,48 +99,87 @@ bool renameFile(const char *pathFrom, const char *pathTo)
 #endif
 }
 
+#include <cstring>
+#include <new>
+#include <stdexcept>
 #include <vector>
 
-/**
- * @brief Get the list of files in a directory.
- *
- * This function returns a list of files in a directory. The list includes the full path of each file.
- * We can't use SPILOCK here because of recursion. Callers of this function should use SPILOCK.
- *
- * @param dirname The name of the directory.
- * @param levels The number of levels of subdirectories to list.
- * @return A vector of strings containing the full path of each file in the directory.
- */
-std::vector<meshtastic_FileInfo> getFiles(const char *dirname, uint8_t levels)
-{
-    std::vector<meshtastic_FileInfo> filenames = {};
 #ifdef FSCom
+namespace
+{
+bool pathEndsWithDot(const char *path)
+{
+    if (!path)
+        return false;
+
+    size_t length = strlen(path);
+    return length > 0 && path[length - 1] == '.';
+}
+
+bool copyFilePath(char *dest, size_t destSize, const char *path, bool *wasLimited)
+{
+    if (!path || destSize == 0) {
+        if (wasLimited)
+            *wasLimited = true;
+        return false;
+    }
+
+    if (strlcpy(dest, path, destSize) >= destSize) {
+        if (wasLimited)
+            *wasLimited = true;
+        return false;
+    }
+
+    return true;
+}
+
+void collectFiles(const char *dirname, uint8_t levels, size_t maxCount, std::vector<meshtastic_FileInfo> &filenames,
+                  bool *wasLimited)
+{
+    if (!dirname)
+        return;
+
     File root = FSCom.open(dirname, FILE_O_READ);
     if (!root)
-        return filenames;
-    if (!root.isDirectory())
-        return filenames;
+        return;
+    if (!root.isDirectory()) {
+        root.close();
+        return;
+    }
 
     File file = root.openNextFile();
-    while (file) {
-        if (file.isDirectory() && !String(file.name()).endsWith(".")) {
-            if (levels) {
+    // file.name()[0] check is a workaround for a bug in the Adafruit LittleFS nrf52 glue (see issue 4395)
+    while (file && file.name()[0]) {
+        if (filenames.size() >= maxCount) {
+            if (wasLimited)
+                *wasLimited = true;
+            file.close();
+            break;
+        }
+        const char *fileName = file.name();
+        if (file.isDirectory() && !pathEndsWithDot(fileName)) {
+            char pathBuffer[sizeof(((meshtastic_FileInfo *)nullptr)->file_name)] = {};
 #ifdef ARCH_ESP32
-                std::vector<meshtastic_FileInfo> subDirFilenames = getFiles(file.path(), levels - 1);
+            const char *subDirPath = file.path();
 #else
-                std::vector<meshtastic_FileInfo> subDirFilenames = getFiles(file.name(), levels - 1);
+            const char *subDirPath = fileName;
 #endif
-                filenames.insert(filenames.end(), subDirFilenames.begin(), subDirFilenames.end());
-                file.close();
+            bool hasSubDirPath = copyFilePath(pathBuffer, sizeof(pathBuffer), subDirPath, wasLimited);
+            file.close();
+
+            if (levels && hasSubDirPath) {
+                collectFiles(pathBuffer, levels - 1, maxCount, filenames, wasLimited);
+            } else if (wasLimited) {
+                *wasLimited = true;
             }
         } else {
             meshtastic_FileInfo fileInfo = {"", static_cast<uint32_t>(file.size())};
 #ifdef ARCH_ESP32
-            strcpy(fileInfo.file_name, file.path());
+            bool hasFilePath = copyFilePath(fileInfo.file_name, sizeof(fileInfo.file_name), file.path(), wasLimited);
 #else
-            strcpy(fileInfo.file_name, file.name());
+            bool hasFilePath = copyFilePath(fileInfo.file_name, sizeof(fileInfo.file_name), file.name(), wasLimited);
 #endif
-            if (!String(fileInfo.file_name).endsWith(".")) {
+            if (hasFilePath && !pathEndsWithDot(fileInfo.file_name)) {
                 filenames.push_back(fileInfo);
             }
             file.close();
@@ -199,6 +187,41 @@ std::vector<meshtastic_FileInfo> getFiles(const char *dirname, uint8_t levels)
         file = root.openNextFile();
     }
     root.close();
+}
+} // namespace
+#endif
+
+// Callers must hold the SPI lock; recursion prevents taking it here.
+std::vector<meshtastic_FileInfo> getFiles(const char *dirname, uint8_t levels, size_t maxCount, bool *wasLimited)
+{
+    std::vector<meshtastic_FileInfo> filenames = {};
+    if (wasLimited)
+        *wasLimited = false;
+#ifdef FSCom
+#if defined(__cpp_exceptions) || defined(__EXCEPTIONS)
+    size_t reservedCount = maxCount;
+    while (reservedCount > 0) {
+        try {
+            filenames.reserve(reservedCount);
+            break;
+        } catch (const std::bad_alloc &) {
+            reservedCount /= 2;
+        } catch (const std::length_error &) {
+            reservedCount /= 2;
+        }
+    }
+    if (reservedCount == 0) {
+        if (wasLimited)
+            *wasLimited = true;
+        return filenames;
+    }
+    if (reservedCount < maxCount) {
+        if (wasLimited)
+            *wasLimited = true;
+        maxCount = reservedCount;
+    }
+#endif
+    collectFiles(dirname, levels, maxCount, filenames, wasLimited);
 #endif
     return filenames;
 }
@@ -358,11 +381,10 @@ void fsInit()
  */
 void setupSDCard()
 {
-#ifdef HAS_SDCARD
+#if defined(HAS_SDCARD) && !defined(SDCARD_USE_SOFT_SPI)
     concurrency::LockGuard g(spiLock);
     SDHandler.begin(SPI_SCK, SPI_MISO, SPI_MOSI);
-
-    if (!SD.begin(SDCARD_CS, SDHandler)) {
+    if (!SD.begin(SDCARD_CS, SDHandler, SD_SPI_FREQUENCY)) {
         LOG_DEBUG("No SD_MMC card detected");
         return;
     }
