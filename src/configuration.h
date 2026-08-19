@@ -532,6 +532,14 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define MESHTASTIC_EXCLUDE_ADMIN 1
 #endif
 
+// CRISiSLab gateway: compile out subsystems that are never used on a
+// BLE-never-paired gateway device, to reclaim heap.
+#if MESHTASTIC_CRISISLAB_GATEWAY
+#define MESHTASTIC_EXCLUDE_BLUETOOTH 1
+#define MESHTASTIC_EXCLUDE_EXTERNALNOTIFICATION 1
+#define MESHTASTIC_EXCLUDE_ATAK 1
+#endif
+
 // // Turn off wifi even if HW supports wifi (webserver relies on wifi and is also disabled)
 #ifdef MESHTASTIC_EXCLUDE_WIFI
 #define MESHTASTIC_EXCLUDE_WEBSERVER 1
