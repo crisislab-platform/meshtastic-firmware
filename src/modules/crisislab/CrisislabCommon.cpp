@@ -376,13 +376,14 @@ void CrisislabCommon::handleCrisislabMessage(
 
 			if (this->liveDataTaskHandle != nullptr) {
 				LOG_WARN("Live data task already running, ignoring start live telemetry command");
+				break;
 			}
 
 			LOG_INFO("Remainig heap	is: %u \n", xPortGetFreeHeapSize());
 			LOG_INFO("Remaining stack is %u\n", uxTaskGetStackHighWaterMark(NULL));
 			LOG_INFO("in ISR? %d", xPortInIsrContext());
 			LOG_INFO("Largest internal block: %u",	(unsigned)heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL));
-			xTaskCreate(
+			BaseType_t liveDataTaskCreateResult = xTaskCreate(
 				CrisislabCommon::sendLiveTelemetry,
 				"LIVE_DATA", // task name
 				8192, // stack size in words
@@ -390,6 +391,18 @@ void CrisislabCommon::handleCrisislabMessage(
 				5, // priority from 0-9
 				&this->liveDataTaskHandle
 			  );
+			if (liveDataTaskCreateResult != pdPASS) {
+				LOG_ERROR(
+					"Failed to create LIVE_DATA telemetry task (xTaskCreate returned %d) - "
+					"likely insufficient contiguous heap for the 32KB stack request; "
+					"largest free block was %u bytes",
+					(int)liveDataTaskCreateResult,
+					(unsigned)heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL)
+				);
+				this->liveDataTaskHandle = nullptr;
+			} else {
+				LOG_INFO("LIVE_DATA telemetry task created successfully, handle=%p", (void *)this->liveDataTaskHandle);
+			}
 
 			break;
 		}
