@@ -90,6 +90,10 @@ int32_t GatewayModule::runOnce()
 // Always enqueue. PubSubClient is not thread-safe; only the MQTT OSThread may
 // call pubSub.publish/loop. The MQTT thread drains this queue every tick.
 void GatewayModule::tryMqttPublish(const uint8_t *payload, size_t length) {
+	if (mqtt == nullptr) {
+		LOG_DEBUG("MQTT not initialized, dropping message instead of publishing");
+		return;
+	}
 	mqtt->enqueueMessage(std::string(GatewayModule::MQTT_OUTGOING_TOPIC), payload, length);
 }
 
