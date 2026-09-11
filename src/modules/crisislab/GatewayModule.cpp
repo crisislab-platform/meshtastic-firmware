@@ -75,16 +75,25 @@ void GatewayModule::mqttCallbackStaticWrapper(char *topic, byte *payload, unsign
 
 int32_t GatewayModule::runOnce()
 {
-	if (mqtt == nullptr || !mqtt->isConnectedDirectly()) {
+	bool currentlyConnected = mqtt != nullptr && mqtt->isConnectedDirectly();
+
+	if (!currentlyConnected) {
+		wasMqttConnected = false;
 		LOG_DEBUG("Waiting for MQTT connection before altering default MQTT behavior");
-		return 3000; // wait 3s before running runOnce again
-	} else {
-		LOG_DEBUG("Got MQTT connection, overriding default MQTT behavior");
+		return 3000; // wait 3s before checking again
+	}
+
+	if (!wasMqttConnected) {
+		// PubSubClient always reconnects with a clean session, so the broker forgets
+		// our subscriptions on every reconnect - this must run again every time the
+		// connection comes back, not just once ever after boot.
+		LOG_DEBUG("Got MQTT connection, (re-)subscribing to for-mesh");
 		mqtt->setMqttCallback(GatewayModule::mqttCallbackStaticWrapper);
 		mqtt->subscribe("for-mesh");
-		// disable this runOnce function
-		return disable();
+		wasMqttConnected = true;
 	}
+
+	return 3000; // keep polling for a future reconnect
 }
 
 // Always enqueue. PubSubClient is not thread-safe; only the MQTT OSThread may

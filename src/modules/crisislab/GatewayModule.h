@@ -23,6 +23,7 @@ class GatewayModule : public CrisislabCommon, private concurrency::OSThread
 	virtual int32_t runOnce() override;
 
   private:
+	bool wasMqttConnected = false;
 	void mqttCallback(char *topic, byte *payload, unsigned int length);
 	static void mqttCallbackStaticWrapper(char *topic, byte *payload, unsigned int length);
 };
