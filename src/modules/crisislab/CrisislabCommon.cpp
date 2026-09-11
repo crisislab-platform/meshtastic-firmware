@@ -586,6 +586,17 @@ void CrisislabCommon::sendLiveTelemetry(void *params) {
 			&localPosition,
 			sizeof(meshtastic_Position)
 		);
+		// localPosition's has_* presence flags are only reliably set when the position
+		// came from a phone-set fixed position (decoded off the wire, already flagged).
+		// When it comes from onboard GPS (MeshService::onGPSChanged -> GPS.cpp), the
+		// underlying lat/lon values are correct but the flags are never set, so nanopb
+		// silently omits them from the wire unless we force them here - same as
+		// PositionModule::allocPositionPacket() already does for normal mesh position
+		// broadcasts.
+		if (localPosition.latitude_i != 0 || localPosition.longitude_i != 0) {
+			message.message.telemetry.position.has_latitude_i = true;
+			message.message.telemetry.position.has_longitude_i = true;
+		}
 
 		message.message.telemetry.has_device_metrics = true;
 		const meshtastic_Telemetry telemetry = deviceTelemetryModule->getDeviceTelemetry();
