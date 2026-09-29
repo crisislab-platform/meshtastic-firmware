@@ -43,20 +43,37 @@ void GatewayModule::mqttCallback(char *topic, byte *payload, unsigned int payloa
 
 	// propogate the message to the mesh
 
-	meshtastic_MeshPacket *meshPacket = this->allocMeshPacket();
-	meshPacket->decoded.payload.size = payloadLength;
-	memcpy(meshPacket->decoded.payload.bytes, payload, payloadLength);
+	// A mesh packet payload holds at most DATA_PAYLOAD_LEN bytes, but the MQTT receive
+	// buffer is much larger (1024) - never copy an oversize command into the heap-allocated
+	// MeshPacket, since that would overflow meshPacket->decoded.payload.bytes and corrupt
+	// the heap. Still handle it locally below; only the mesh forward is skipped.
+	meshtastic_MeshPacket *meshPacket = nullptr;
+	if (payloadLength <= sizeof(meshPacket->decoded.payload.bytes)) {
+		meshPacket = this->allocMeshPacket();
+		meshPacket->decoded.payload.size = payloadLength;
+		memcpy(meshPacket->decoded.payload.bytes, payload, payloadLength);
 
-	if (meshPacket->channel == 0) {
-		LOG_WARN("Crisislab modules are using the primary channel");
+		if (meshPacket->channel == 0) {
+			LOG_WARN("Crisislab modules are using the primary channel");
+		} else {
+			LOG_DEBUG("Using channel index %d for crisislab message", this->channelIndex);
+		}
 	} else {
-		LOG_DEBUG("Using channel index %d for crisislab message", this->channelIndex);
+		LOG_ERROR(
+			"MQTT message is %u bytes, over the %u byte mesh payload limit - handling locally, not forwarding to the mesh",
+			payloadLength,
+			(unsigned)sizeof(meshPacket->decoded.payload.bytes)
+		);
 	}
 
 	// Handle the message locally first. Pass nullptr for meshPacket because
 	// MQTT inbound messages have no meaningful radio metadata (rssi/snr/from)
 	// and to avoid use-after-free if we hand the packet to sendToMesh below.
 	this->handleCrisislabMessage(message, nullptr);
+
+	if (meshPacket == nullptr) {
+		return;
+	}
 
 	// broadcast message to the rest of the mesh to handle too
 	if (message.which_message != meshtastic_CrisislabMessage_get_mesh_settings_request_tag) {
@@ -75,25 +92,20 @@ void GatewayModule::mqttCallbackStaticWrapper(char *topic, byte *payload, unsign
 
 int32_t GatewayModule::runOnce()
 {
-	bool currentlyConnected = mqtt != nullptr && mqtt->isConnectedDirectly();
-
-	if (!currentlyConnected) {
-		wasMqttConnected = false;
-		LOG_DEBUG("Waiting for MQTT connection before altering default MQTT behavior");
-		return 3000; // wait 3s before checking again
+	if (mqtt == nullptr) {
+		LOG_DEBUG("Waiting for MQTT to be created before registering for-mesh handling");
+		return 3000;
 	}
 
-	if (!wasMqttConnected) {
-		// PubSubClient always reconnects with a clean session, so the broker forgets
-		// our subscriptions on every reconnect - this must run again every time the
-		// connection comes back, not just once ever after boot.
-		LOG_DEBUG("Got MQTT connection, (re-)subscribing to for-mesh");
-		mqtt->setMqttCallback(GatewayModule::mqttCallbackStaticWrapper);
-		mqtt->subscribe("for-mesh");
-		wasMqttConnected = true;
-	}
+	// The callback set here persists across reconnects (PubSubClient::setCallback is sticky),
+	// and MQTT::subscribe() now records this topic so MQTT::sendSubscriptions() re-applies it
+	// after every future (re)connect - registering once here is enough, unlike before when
+	// the broker silently forgot this subscription on every reconnect.
+	mqtt->setMqttCallback(GatewayModule::mqttCallbackStaticWrapper);
+	mqtt->subscribe(MQTT_INCOMING_TOPIC);
+	LOG_DEBUG("Registered for-mesh callback and subscription");
 
-	return 3000; // keep polling for a future reconnect
+	return disable();
 }
 
 // Always enqueue. PubSubClient is not thread-safe; only the MQTT OSThread may

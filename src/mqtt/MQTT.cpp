@@ -1,4 +1,5 @@
 #include "MQTT.h"
+#include <algorithm>
 #include "MeshService.h"
 #include "NodeDB.h"
 #include "PowerFSM.h"
@@ -392,6 +393,12 @@ void MQTT::setMqttCallback(std::function<void(char *topic, byte *payload, unsign
 
 bool MQTT::subscribe(const char *topic)
 {
+    if (std::find(extraSubscriptions.begin(), extraSubscriptions.end(), topic) == extraSubscriptions.end()) {
+        extraSubscriptions.emplace_back(topic);
+    }
+    // Also apply immediately if already connected; if not connected yet (or the session
+    // gets torn down and rebuilt later), sendSubscriptions() re-applies extraSubscriptions
+    // on every future (re)connect.
     return pubSub.subscribe(topic);
 }
 
@@ -621,6 +628,14 @@ void MQTT::sendSubscriptions()
         pubSub.subscribe(topic.c_str(), 1);
     }
 #endif
+
+    // Topics registered externally via subscribe() (e.g. CRISiSLab's GatewayModule) aren't
+    // known to this function otherwise, and PubSubClient reconnects with a clean session, so
+    // the broker forgets them on every reconnect unless we resend them here too.
+    for (const auto &extraTopic : extraSubscriptions) {
+        LOG_INFO("Re-subscribe to %s", extraTopic.c_str());
+        pubSub.subscribe(extraTopic.c_str());
+    }
 #endif
 }
 

@@ -24,6 +24,9 @@
 #include <memory>
 #endif
 
+#include <vector>
+#include <string>
+
 #define MAX_MQTT_QUEUE 16
 
 /**
@@ -76,6 +79,11 @@ class MQTT : private concurrency::OSThread
         std::basic_string<uint8_t> envBytes; // binary/pb_encode_to_bytes ServiceEnvelope
     };
     PointerQueue<QueueEntry> mqttQueue;
+
+    // Topics registered through subscribe(); re-sent by sendSubscriptions() after every
+    // (re)connect, because PubSubClient reconnects with a clean session and the broker
+    // forgets every subscription each time.
+    std::vector<std::string> extraSubscriptions;
 
     int reconnectCount = 0;
     bool isConfiguredForDefaultServer = true;
